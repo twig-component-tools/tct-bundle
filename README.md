@@ -104,9 +104,10 @@ Understanding what is transpiled to what can help you master this new syntax:
 * String parameters: properties without `{{ … }}`
 * Variables and expressions: properties with `{{ … }}`
 
-## Examples
+### Examples
 
 TCT In:
+
 ```twig
   <AButton theme="primary">
     <block #icon>
@@ -119,6 +120,7 @@ TCT In:
 ```
 
 Twig Out:
+
 ```twig
  {% embed '@components/Atom/AButton/AButton.twig' with { theme: "primary" } only %}
     {% block icon %}
@@ -132,3 +134,13 @@ Twig Out:
  
  {% include '@components/Atom/AIcon/AIcon.twig' with { name: random_name() } only %}
 ```
+
+### Reasoning
+
+This preprocessor aims to make developing and reviewing Twig templates easier and faster.
+
+I have always been displeased with the time it takes to scan and understand bigger Twig projects.
+Working with partials and components is useful, but there is not enough visual distinction between **control**
+statements: `{% if … %}`, `{% for … %}`, `{% set … %}` and **markup/composition**: `{% include … %}`, `{% embed … %}`.
+[Customizing the syntax](https://twig.symfony.com/doc/2.x/recipes.html#customizing-the-syntax) doesn't quite cut it for
+me.

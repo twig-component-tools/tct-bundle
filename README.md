@@ -84,7 +84,7 @@ Blocks can be defined and used like in any regular twig template. There are a fe
 
 <button type="button" class="a-button -{{ theme|default('grey') }}">
   {% if block('icon') is defined %}
-    <i class="a-button_icon">{{ block('icon')|raw %}</i>
+    <i class="a-button_icon">{{ block('icon')|raw }}</i>
   {% endif %}
   <span class="a-button__label">
     {% block label %}{% endblock %}

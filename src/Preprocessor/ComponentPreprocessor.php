@@ -1,34 +1,27 @@
 <?php
 
-namespace TwigComponentTools\Loader;
+namespace TwigComponentTools\TCTBundle\Preprocessor;
 
+use Exception;
 use SimpleXMLElement;
-use Twig\Loader\FilesystemLoader;
-use Twig\Loader\LoaderInterface;
+use Symfony\Component\VarDumper\VarDumper;
 use Twig\Source;
+use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
 
-class ComponentLoader implements LoaderInterface
+class ComponentPreprocessor implements PreprocessorInterface
 {
-    private const TYPES = [
-        'q' => 'Quark',
-        'a' => 'Atom',
-        'm' => 'Molecule',
-        'o' => 'Organism',
-    ];
 
-    private FilesystemLoader $filesystemLoader;
+    private ComponentNamingInterface $componentNaming;
 
-    private array $loadedComponents = [];
+    private string $componentRegex;
 
-    public function __construct(FilesystemLoader $filesystemLoader)
-    {
-        $this->filesystemLoader = $filesystemLoader;
+    public function __construct (ComponentNamingInterface $componentNaming) {
+        $this->componentNaming = $componentNaming;
+        $this->componentRegex = $this->componentNaming->getComponentRegex();
     }
 
-    public function getSourceContext(string $name): Source
+    public function processSourceContext(Source $source): Source
     {
-        $source = $this->filesystemLoader->getSourceContext($name);
-
         $component     = [];
         $code          = $source->getCode();
         $lastPosition  = 0;
@@ -38,7 +31,7 @@ class ComponentLoader implements LoaderInterface
             [
                 'name'          => $name,
                 'startPosition' => $startPosition,
-                'tag'           => $openingTag,
+                // 'tag'           => $openingTag,
                 'endPosition'   => $endOfOpeningTag,
                 'attributes'    => $attributes,
                 'selfClosing'   => $selfClosing,
@@ -75,15 +68,61 @@ class ComponentLoader implements LoaderInterface
         return $source;
     }
 
+    private function getTwigParameterMap(string $attributesString): array
+    {
+        $attributeObject  = [];
+        $attributesString = htmlspecialchars($attributesString, ENT_NOQUOTES);
+        $only             = true;
+
+        try {
+            $element    = new SimpleXMLElement("<element $attributesString />");
+            $attributes = $element->attributes();
+        } catch (Exception $exception) {
+            $attributes = [];
+        }
+
+        /**
+         * @var SimpleXMLElement $value
+         */
+        foreach ($attributes as $key => $value) {
+            if ('only' === $key && 'false' === $value->__toString()) {
+                $only = false;
+                continue;
+            }
+
+            $isVar = str_starts_with($value, '{{') && str_ends_with($value, '}}');
+
+            if ($isVar) {
+                $value = trim(substr($value, 2, -2));
+            }
+
+            $escape = $isVar ? '' : '\'';
+            $value  = str_replace('\'', '\\\'', $value);
+
+            $attributeObject[] = "$key: $escape$value$escape";
+        }
+
+        $attributeObject[] = 'parent: _context';
+
+        return [
+            'params' => implode(', ', $attributeObject),
+            'only'   => $only,
+        ];
+    }
+
+    private function replaceBlocks(string $code): string
+    {
+        $code = preg_replace('/<block #([a-z]+)>/', '{% block $1 %}', $code);
+
+        return str_replace('</block>', '{% endblock %}', $code);
+    }
+
     public function getNextComponent(string $code, int $lastPosition, array &$component): bool
     {
         $matches = [];
 
-        /**
-         * @see https://regex101.com/r/3ujquL/2
-         */
         $found = preg_match(
-            '/<([QAMO][A-Z][a-zA-Z]+\b)\s*([a-zA-Z]+=.+\")?\s*\/?>/msU',
+            $this->componentRegex,
             $code,
             $matches,
             PREG_OFFSET_CAPTURE,
@@ -150,12 +189,12 @@ class ComponentLoader implements LoaderInterface
         bool $selfClosing
     ): string {
         $twigTag = $selfClosing ? 'include' : 'embed';
-        $path    = $this->getTemplatePath($name);
+        $path    = $this->componentNaming->pathFromComponentName($name);
 
         [
             'params' => $params,
             'only'   => $only,
-        ] = $this->createParameterMap($attributes);
+        ] = $this->getTwigParameterMap($attributes);
 
         $onlyTag = $only ? 'only' : '';
 
@@ -165,99 +204,5 @@ class ComponentLoader implements LoaderInterface
             $startPosition,
             $tagLength
         );
-    }
-
-    private function getTemplatePath(string $namePascal): string
-    {
-        return implode(DIRECTORY_SEPARATOR, [
-            '@components',
-            self::TYPES[strtolower($namePascal[0])],
-            $namePascal,
-            "{$namePascal}.twig",
-        ]);
-    }
-
-    private function createParameterMap(string $attributesString): array
-    {
-        if (empty($attributesString)) {
-            return [
-                'params' => '',
-                'only'   => true,
-            ];
-        }
-
-        $attributesString = htmlspecialchars($attributesString, ENT_NOQUOTES);
-
-        $attributeObject = [];
-        try {
-            $attributes = new SimpleXMLElement("<element $attributesString />");
-        } catch (\Exception $exception) {
-            return [
-                'params' => '',
-                'only'   => true,
-            ];
-        }
-
-        $only = true;
-        /**
-         * @var SimpleXMLElement $value
-         */
-        foreach ($attributes->attributes() as $key => $value) {
-            if ($key === "only" && (string)$value === "false") {
-                $only = false;
-                continue;
-            }
-
-            $isVar = strpos($value, '{{') === 0 && strpos($value, '}}') === strlen($value) - 2;
-
-            if ($isVar) {
-                $value = trim(substr($value, 2, -2));
-            }
-
-            $escape = $isVar ? '' : '\'';
-
-            $attributeObject[] = "$key: $escape$value$escape";
-        }
-
-        return [
-            'params' => implode(', ', $attributeObject),
-            'only'   => $only,
-        ];
-    }
-
-    private function replaceBlocks(string $code): string
-    {
-        $code = preg_replace('/<block #([a-z]+)>/', '{% block $1 %}', $code);
-
-        return str_replace('</block>', '{% endblock %}', $code);
-    }
-
-    public function getCacheKey(string $name): string
-    {
-        if (strpos($name, '@components') === 0) {
-            $parts         = explode('/', $name);
-            $componentName = str_replace('.twig', '', $parts[count($parts) - 1]);
-
-            if (!in_array($componentName, $this->loadedComponents)) {
-                $this->loadedComponents[] = $componentName;
-            }
-        }
-
-        return $this->filesystemLoader->getCacheKey($name);
-    }
-
-    public function isFresh(string $name, int $time): bool
-    {
-        return $this->filesystemLoader->isFresh($name, $time);
-    }
-
-    public function exists(string $name): bool
-    {
-        return $this->filesystemLoader->exists($name);
-    }
-
-    public function getLoadedComponents(): array
-    {
-        return $this->loadedComponents;
     }
 }

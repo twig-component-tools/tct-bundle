@@ -1,11 +1,11 @@
 {
-  "name": "twig-component-tools/loader",
+  "name": "twig-component-tools/tct-bundle",
   "version": "0.0.1",
   "type": "library",
   "license": "MIT",
   "autoload": {
     "psr-4": {
-      "TwigComponentTools\\Loader\\": "src/"
+      "TwigComponentTools\\TCTBundle\\": "src/"
     }
   },
   "authors": [
@@ -15,7 +15,9 @@
     }
   ],
   "require": {
+    "ext-simplexml": "*",
     "twig/twig": "^3.3",
-    "ext-simplexml": "*"
+    "symfony/http-kernel": "^5.4",
+    "symfony/webpack-encore-bundle": "^1.14"
   }
 }

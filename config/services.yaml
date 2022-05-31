@@ -1,0 +1,36 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  TwigComponentTools\TCTBundle\Naming\AtomicDesignComponentNaming:
+    public: true
+
+  TwigComponentTools\TCTBundle\Preprocessor\ComponentPreprocessor:
+    public: true
+    arguments:
+      $componentNaming: '@TwigComponentTools\TCTBundle\Naming\AtomicDesignComponentNaming'
+
+  TwigComponentTools\TCTBundle\TagRenderer\EncoreComponentTagRenderer:
+    public: true
+    arguments:
+      $componentNaming: '@TwigComponentTools\TCTBundle\Naming\AtomicDesignComponentNaming'
+      $tagRenderer: '@webpack_encore.tag_renderer'
+
+  TwigComponentTools\TCTBundle\Loader\ComponentLoader:
+    public: true
+    tags:
+      - { name: twig.loader, priority: 10 }
+    arguments:
+      $filesystemLoader: '@twig.loader.native_filesystem'
+      $preprocessor: '@TwigComponentTools\TCTBundle\Preprocessor\ComponentPreprocessor'
+      $componentNaming: '@TwigComponentTools\TCTBundle\Naming\AtomicDesignComponentNaming'
+
+  TwigComponentTools\TCTBundle\EventListener\ComponentTagInjectorListener:
+    public: true
+    tags:
+      - { name: kernel.event_subscriber }
+    arguments:
+      $componentTagRenderer: '@TwigComponentTools\TCTBundle\TagRenderer\EncoreComponentTagRenderer'
+      $componentLoader: '@TwigComponentTools\TCTBundle\Loader\ComponentLoader'

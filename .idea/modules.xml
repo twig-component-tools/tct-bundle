@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/loader.iml" filepath="$PROJECT_DIR$/.idea/loader.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../../schoene-dienstleistungen/.idea/symfony-5-webpack-template.iml" filepath="$PROJECT_DIR$/../../schoene-dienstleistungen/.idea/symfony-5-webpack-template.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/tct-bundle.iml" filepath="$PROJECT_DIR$/.idea/tct-bundle.iml" />
     </modules>
   </component>
 </project>

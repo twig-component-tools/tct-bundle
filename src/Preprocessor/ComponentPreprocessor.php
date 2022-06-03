@@ -3,8 +3,8 @@
 namespace TwigComponentTools\TCTBundle\Preprocessor;
 
 use Exception;
+use JetBrains\PhpStorm\ArrayShape;
 use SimpleXMLElement;
-use Symfony\Component\VarDumper\VarDumper;
 use Twig\Source;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
 
@@ -68,6 +68,7 @@ class ComponentPreprocessor implements PreprocessorInterface
         return $source;
     }
 
+    #[ArrayShape(['params' => "string", 'only' => "bool"])]
     private function getTwigParameterMap(string $attributesString): array
     {
         $attributeObject  = [];
@@ -167,7 +168,7 @@ class ComponentPreprocessor implements PreprocessorInterface
             $startOfClosingTag - $endOfOpeningTag
         );
 
-        $defaultBlock = false === strpos($inner, '<block');
+        $defaultBlock = !str_contains($inner, '<block');
         if ($defaultBlock) {
             $code = substr_replace(
                 $code,

@@ -2,7 +2,6 @@
 
 namespace TwigComponentTools\TCTBundle\Loader;
 
-use Symfony\Component\VarDumper\VarDumper;
 use Twig\Loader\FilesystemLoader;
 use Twig\Loader\LoaderInterface;
 use Twig\Source;

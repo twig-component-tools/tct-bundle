@@ -68,6 +68,6 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
 
     public function renderBodyTags(array $loadedComponents): string
     {
-        return $this->renderTags($loadedComponents, [], '');
+        return $this->renderTags($loadedComponents);
     }
 }

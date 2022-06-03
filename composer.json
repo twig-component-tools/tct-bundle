@@ -1,7 +1,7 @@
 {
   "name": "twig-component-tools/tct-bundle",
   "version": "0.0.1",
-  "type": "library",
+  "type": "symfony-bundle",
   "license": "MIT",
   "autoload": {
     "psr-4": {
@@ -15,9 +15,17 @@
     }
   ],
   "require": {
+    "php": ">=8.1",
     "ext-simplexml": "*",
     "twig/twig": "^3.3",
     "symfony/http-kernel": "^5.4",
-    "symfony/webpack-encore-bundle": "^1.14"
+    "symfony/webpack-encore-bundle": "^1.14",
+    "symfony/dependency-injection": "^5.4"
+  },
+  "archive": {
+    "exclude": [
+      "/.idea",
+      "/composer.lock"
+    ]
   }
 }

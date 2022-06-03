@@ -1,6 +1,6 @@
 {
   "name": "twig-component-tools/tct-bundle",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "symfony-bundle",
   "license": "MIT",
   "autoload": {

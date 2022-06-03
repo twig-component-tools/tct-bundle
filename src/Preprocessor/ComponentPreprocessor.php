@@ -15,9 +15,10 @@ class ComponentPreprocessor implements PreprocessorInterface
 
     private string $componentRegex;
 
-    public function __construct (ComponentNamingInterface $componentNaming) {
+    public function __construct(ComponentNamingInterface $componentNaming)
+    {
         $this->componentNaming = $componentNaming;
-        $this->componentRegex = $this->componentNaming->getComponentRegex();
+        $this->componentRegex  = $this->componentNaming->getComponentRegex();
     }
 
     public function processSourceContext(Source $source): Source
@@ -98,7 +99,10 @@ class ComponentPreprocessor implements PreprocessorInterface
             }
 
             $escape = $isVar ? '' : '\'';
-            $value  = str_replace('\'', '\\\'', $value);
+
+            if (!$isVar) {
+                $value = str_replace('\'r', '\\\'', $value);
+            }
 
             $attributeObject[] = "$key: $escape$value$escape";
         }

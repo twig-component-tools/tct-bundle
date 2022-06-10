@@ -9,6 +9,7 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
         'a' => 'Atom',
         'm' => 'Molecule',
         'o' => 'Organism',
+        't' => 'Template'
     ];
 
     private string $typeOptions;

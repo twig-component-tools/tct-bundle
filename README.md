@@ -2,6 +2,12 @@
 
 Component loader and pre-processor for Twig templates.
 
+## Project Status: ALPHA
+
+* No BC promise
+* Changes quickly with internal discussions only
+* Open for suggestions and help
+
 ## Syntax
 
 Components can be used within regular Twig templates:
@@ -21,15 +27,15 @@ Components can be used within regular Twig templates:
 ```twig
 {# File: @components/Atom/AButton/AButton.twig #}
 
-<button type="button" class="a-button -{{ theme|default('grey') }}">
-  {{ label }}
+<button type="button" class="a-button -{{ props.theme|default('grey') }}">
+  {{ props.label }}
 </button>
 ```
 
 ## Properties
 
 Props passed to your components can be either hard-coded strings (example: `theme`), or variables and expressions (
-example: `level`).
+example: `level`). They will be scoped in the object `props`.
 
 ```twig
 <ALabel
@@ -58,7 +64,7 @@ Blocks can be defined and used like in any regular twig template. There are a fe
 ```twig
 {# File: @components/Atom/AButton/AButton.twig #}
 
-<button type="button" class="a-button -{{ theme|default('grey') }}">
+<button type="button" class="a-button -{{ props.theme|default('grey') }}">
   {% block AButton_default %}{% endblock %}
 </button>
 ```
@@ -82,7 +88,7 @@ Blocks can be defined and used like in any regular twig template. There are a fe
 ```twig
 {# File: @components/Atom/AButton/AButton.twig #}
 
-<button type="button" class="a-button -{{ theme|default('grey') }}">
+<button type="button" class="a-button -{{ props.theme|default('grey') }}">
   {% if block('icon') is defined %}
     <i class="a-button_icon">{{ block('icon')|raw }}</i>
   {% endif %}

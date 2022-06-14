@@ -9,6 +9,7 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
         'a' => 'Atom',
         'm' => 'Molecule',
         'o' => 'Organism',
+        't' => 'Template',
     ];
 
     private string $typeOptions;
@@ -22,7 +23,7 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
     {
         $parts = explode('/', $path);
 
-        if ($parts[0] !== '@components') {
+        if ('@components' !== $parts[0]) {
             return null;
         }
 
@@ -59,7 +60,7 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
     }
 
     /**
-     * Discovers Pascal-case atomic design components
+     * Discovers Pascal-case atomic design components.
      *
      * Examples:
      * QIcon

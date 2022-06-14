@@ -3,14 +3,12 @@
 namespace TwigComponentTools\TCTBundle\Preprocessor;
 
 use Exception;
-use JetBrains\PhpStorm\ArrayShape;
 use SimpleXMLElement;
 use Twig\Source;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
 
 class ComponentPreprocessor implements PreprocessorInterface
 {
-
     private ComponentNamingInterface $componentNaming;
 
     private string $componentRegex;
@@ -67,59 +65,6 @@ class ComponentPreprocessor implements PreprocessorInterface
         }
 
         return $source;
-    }
-
-    #[ArrayShape(['params' => "string", 'only' => "bool"])]
-    private function getTwigParameterMap(string $attributesString): array
-    {
-        $attributeObject  = [];
-        $attributesString = htmlspecialchars($attributesString, ENT_NOQUOTES);
-        $only             = true;
-
-        try {
-            $element    = new SimpleXMLElement("<element $attributesString />");
-            $attributes = $element->attributes();
-        } catch (Exception $exception) {
-            $attributes = [];
-        }
-
-        /**
-         * @var SimpleXMLElement $value
-         */
-        foreach ($attributes as $key => $value) {
-            if ('only' === $key && 'false' === $value->__toString()) {
-                $only = false;
-                continue;
-            }
-
-            $isVar = str_starts_with($value, '{{') && str_ends_with($value, '}}');
-
-            if ($isVar) {
-                $value = trim(substr($value, 2, -2));
-            }
-
-            $escape = $isVar ? '' : '\'';
-
-            if (!$isVar) {
-                $value = str_replace('\'r', '\\\'', $value);
-            }
-
-            $attributeObject[] = "$key: $escape$value$escape";
-        }
-
-        $attributeObject[] = 'parent: _context';
-
-        return [
-            'params' => implode(', ', $attributeObject),
-            'only'   => $only,
-        ];
-    }
-
-    private function replaceBlocks(string $code): string
-    {
-        $code = preg_replace('/<block #([a-z]+)>/', '{% block $1 %}', $code);
-
-        return str_replace('</block>', '{% endblock %}', $code);
     }
 
     public function getNextComponent(string $code, int $lastPosition, array &$component): bool
@@ -195,19 +140,54 @@ class ComponentPreprocessor implements PreprocessorInterface
     ): string {
         $twigTag = $selfClosing ? 'include' : 'embed';
         $path    = $this->componentNaming->pathFromComponentName($name);
-
-        [
-            'params' => $params,
-            'only'   => $only,
-        ] = $this->getTwigParameterMap($attributes);
-
-        $onlyTag = $only ? 'only' : '';
+        $params  = $this->getTwigParameterMap($attributes);
 
         return substr_replace(
             $code,
-            "{% $twigTag '$path' with {{$params}} {$onlyTag} %}",
+            "{% $twigTag '$path' with { props: { $params } } %}",
             $startPosition,
             $tagLength
         );
+    }
+
+    private function getTwigParameterMap(string $attributesString): string
+    {
+        $attributeObject  = [];
+        $attributesString = htmlspecialchars($attributesString, ENT_NOQUOTES);
+
+        try {
+            $element    = new SimpleXMLElement("<element $attributesString />");
+            $attributes = $element->attributes();
+        } catch (Exception $exception) {
+            $attributes = [];
+        }
+
+        /**
+         * @var SimpleXMLElement $value
+         */
+        foreach ($attributes as $key => $value) {
+            $isVar = str_starts_with($value, '{{') && str_ends_with($value, '}}');
+
+            if ($isVar) {
+                $value = trim(substr($value, 2, -2));
+            }
+
+            $escape = $isVar ? '' : '\'';
+
+            if (!$isVar) {
+                $value = str_replace('\'', '\\\'', $value);
+            }
+
+            $attributeObject[] = "$key: $escape$value$escape";
+        }
+
+        return implode(', ', $attributeObject);
+    }
+
+    private function replaceBlocks(string $code): string
+    {
+        $code = preg_replace('/<block #([a-z]+)>/', '{% block $1 %}', $code);
+
+        return str_replace('</block>', '{% endblock %}', $code);
     }
 }

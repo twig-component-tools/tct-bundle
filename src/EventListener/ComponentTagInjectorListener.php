@@ -10,7 +10,6 @@ use TwigComponentTools\TCTBundle\TagRenderer\ComponentTagRenderInterface;
 
 class ComponentTagInjectorListener implements EventSubscriberInterface
 {
-
     private ComponentTagRenderInterface $componentTagRenderer;
 
     private ComponentLoaderInterface $componentLoader;
@@ -21,6 +20,13 @@ class ComponentTagInjectorListener implements EventSubscriberInterface
     ) {
         $this->componentTagRenderer = $componentTagRenderer;
         $this->componentLoader      = $componentLoader;
+    }
+
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            KernelEvents::RESPONSE => 'onKernelResponse',
+        ];
     }
 
     public function onKernelResponse(ResponseEvent $event)
@@ -34,10 +40,10 @@ class ComponentTagInjectorListener implements EventSubscriberInterface
         }
 
         $headTags = $this->componentTagRenderer->renderHeadTags($loadedComponents);
-        $content  = $this->injectAtTag($content, 'TCTHeadEntries', $headTags);
+        $content  = $this->injectAtTag($content, 'TCT-HeadEntries', $headTags);
 
         $bodyTags = $this->componentTagRenderer->renderBodyTags($loadedComponents);
-        $content  = $this->injectAtTag($content, 'TCTBodyEntries', $bodyTags);
+        $content  = $this->injectAtTag($content, 'TCT-BodyEntries', $bodyTags);
 
         $response->setContent($content);
     }
@@ -45,12 +51,5 @@ class ComponentTagInjectorListener implements EventSubscriberInterface
     private function injectAtTag(string $markup, string $tag, string $tagsToInject): string
     {
         return str_replace("<$tag/>", $tagsToInject, $markup);
-    }
-
-    public static function getSubscribedEvents(): array
-    {
-        return [
-            KernelEvents::RESPONSE => 'onKernelResponse'
-        ];
     }
 }

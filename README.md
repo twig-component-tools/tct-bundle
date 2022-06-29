@@ -128,7 +128,7 @@ TCT In:
 Twig Out:
 
 ```twig
- {% embed '@components/Atom/AButton/AButton.twig' with { theme: "primary" } only %}
+ {% embed '@components/Atom/AButton/AButton.twig' with { props: { theme: "primary" } } %}
     {% block icon %}
       <span>&times;</span>
     {% endblock %}
@@ -138,7 +138,7 @@ Twig Out:
     {% endblock %}
  {% endembed %} 
  
- {% include '@components/Atom/AIcon/AIcon.twig' with { name: random_name() } only %}
+ {% include '@components/Atom/AIcon/AIcon.twig' with { props: { name: random_name() } } %}
 ```
 
 ### Reasoning

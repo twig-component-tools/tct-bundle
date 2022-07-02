@@ -1,0 +1,3 @@
+storybook_render:
+  path: /
+  controller: TwigComponentTools\TCTBundle\Controller\StorybookController::storybookComponent

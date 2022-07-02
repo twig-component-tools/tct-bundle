@@ -19,6 +19,11 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
         $this->tagRenderer     = $tagRenderer;
     }
 
+    public function renderBodyTags(array $loadedComponents): string
+    {
+        return $this->renderTags($loadedComponents);
+    }
+
     public function renderTags(
         array $loadedComponents,
         array $extraAttributes = [],
@@ -31,7 +36,6 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
 
         foreach ($loadedComponents as $name) {
             $entryName = $this->componentNaming->getEntryName($name, $entrypointName, $extraAttributes, $type);
-            $selector  = $this->componentNaming->selectorFromName($name, $entryName);
 
             $jsTags = $this->tagRenderer->renderWebpackScriptTags(
                 $entryName,
@@ -42,7 +46,7 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
 
             $jsTags = preg_replace(
                 "/$entryName(\..*)?\.js\"/",
-                "$entryName$1.js\" data-class-name=\"$name\" data-selector=\"$selector\"",
+                "$entryName$1.js\" data-component=\"$name\"",
                 $jsTags
             );
 
@@ -64,10 +68,5 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
     public function renderHeadTags(array $loadedComponents): string
     {
         return $this->renderTags($loadedComponents, ['async' => true, 'defer' => true], 'head');
-    }
-
-    public function renderBodyTags(array $loadedComponents): string
-    {
-        return $this->renderTags($loadedComponents);
     }
 }

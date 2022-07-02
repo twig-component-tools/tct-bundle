@@ -4,6 +4,7 @@ namespace TwigComponentTools\TCTBundle\Preprocessor;
 
 use Exception;
 use SimpleXMLElement;
+use Symfony\Component\VarDumper\VarDumper;
 use Twig\Source;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
 
@@ -13,32 +14,37 @@ class ComponentPreprocessor implements PreprocessorInterface
 
     private string $componentRegex;
 
+    private array $blocks = [];
+
     public function __construct(ComponentNamingInterface $componentNaming)
     {
         $this->componentNaming = $componentNaming;
-        $this->componentRegex  = $this->componentNaming->getComponentRegex();
+        $this->componentRegex = $this->componentNaming->getComponentRegex();
     }
 
     public function processSourceContext(Source $source): Source
     {
-        $component     = [];
-        $code          = $source->getCode();
-        $lastPosition  = 0;
+        $component = null;
+        $code = $source->getCode();
+        $lastPosition = 0;
         $hasComponents = false;
 
         while ($this->getNextComponent($code, $lastPosition, $component)) {
+            $this->blocks = [];
+            $hasComponents = true;
+
             [
-                'name'          => $name,
+                'name' => $name,
                 'startPosition' => $startPosition,
                 // 'tag'           => $openingTag,
-                'endPosition'   => $endOfOpeningTag,
-                'attributes'    => $attributes,
-                'selfClosing'   => $selfClosing,
-                'length'        => $openingTagLength,
+                'endPosition' => $endOfOpeningTag,
+                'attributes' => $attributes,
+                'selfClosing' => $selfClosing,
+                'length' => $openingTagLength,
             ] = $component;
 
             if (!$selfClosing) {
-                $closingTag        = "</$name>";
+                $closingTag = "</$name>";
                 $startOfClosingTag = strpos($code, $closingTag, $endOfOpeningTag);
 
                 $code = $this->replaceClosingTag($code, $startOfClosingTag, $closingTag);
@@ -54,12 +60,15 @@ class ComponentPreprocessor implements PreprocessorInterface
                 $selfClosing
             );
 
-            $lastPosition  = $startPosition + 1;
-            $hasComponents = true;
+            $blocks = implode(PHP_EOL, $this->blocks);
+            $lastPosition = $startPosition + 1;
+            $code = substr_replace($code, $blocks, $startPosition, 0);
         }
 
         if ($hasComponents) {
             $code = $this->replaceBlocks($code);
+
+            VarDumper::dump($code);
 
             return new Source($code, $source->getName(), $source->getPath());
         }
@@ -67,35 +76,40 @@ class ComponentPreprocessor implements PreprocessorInterface
         return $source;
     }
 
-    public function getNextComponent(string $code, int $lastPosition, array &$component): bool
+    /**
+     * @param string    $code         Code to search components in
+     * @param int       $lastPosition Offset at which to start searching for the next component
+     * @param Component $component    The component information will be saved in this array
+     *
+     * @return bool True if it found a component
+     */
+    public function getNextComponent(string $code, int $lastPosition, Component &$component): bool
     {
         $matches = [];
 
-        $found = preg_match(
-            $this->componentRegex,
-            $code,
-            $matches,
-            PREG_OFFSET_CAPTURE,
-            $lastPosition
-        );
+        $found = 1 === preg_match(
+                $this->componentRegex,
+                $code,
+                $matches,
+                PREG_OFFSET_CAPTURE,
+                $lastPosition
+            );
 
-        if (0 === $found) {
+        if (!$found) {
             return false;
         }
 
-        $tag    = $matches[0][0];
-        $length = strlen($tag);
-        $start  = $matches[0][1];
+        list($fullMatch, $nameMatch, $attributesMatch) = $matches;
+        list($tag, $start) = $fullMatch;
+        list($name) = $nameMatch;
+        list($attributes) = $attributesMatch;
 
-        $component = [
-            'tag'           => $tag,
-            'name'          => $matches[1][0],
-            'startPosition' => $start,
-            'endPosition'   => $start + $length,
-            'attributes'    => $matches[2][0] ?? '',
-            'selfClosing'   => '/' === $tag[$length - 2],
-            'length'        => $length,
-        ];
+        $component = new Component(
+            $tag,
+            $name,
+            $attributes,
+            $start
+        );
 
         return true;
     }
@@ -117,11 +131,17 @@ class ComponentPreprocessor implements PreprocessorInterface
             $startOfClosingTag - $endOfOpeningTag
         );
 
-        $defaultBlock = !str_contains($inner, '<block');
+        $defaultBlock = !str_starts_with(trim($inner), '<block');
+
         if ($defaultBlock) {
+            $id = uniqid($name).'_default';
+            $blockSet = "\n{% set {$id} %}$inner{% endset %}\n";
+
+            $this->blocks[] = $blockSet;
+
             $code = substr_replace(
                 $code,
-                "\n{% block ${name}_default %}$inner{% endblock %}\n",
+                "\n{% block default %}{{- $id -}}{% endblock %}\n",
                 $endOfOpeningTag,
                 strlen($inner)
             );
@@ -139,8 +159,8 @@ class ComponentPreprocessor implements PreprocessorInterface
         bool $selfClosing
     ): string {
         $twigTag = $selfClosing ? 'include' : 'embed';
-        $path    = $this->componentNaming->pathFromComponentName($name);
-        $params  = $this->getTwigParameterMap($attributes);
+        $path = $this->componentNaming->pathFromComponentName($name);
+        $params = $this->getTwigParameterMap($attributes);
 
         return substr_replace(
             $code,
@@ -152,11 +172,11 @@ class ComponentPreprocessor implements PreprocessorInterface
 
     private function getTwigParameterMap(string $attributesString): string
     {
-        $attributeObject  = [];
+        $attributeObject = [];
         $attributesString = htmlspecialchars($attributesString, ENT_NOQUOTES);
 
         try {
-            $element    = new SimpleXMLElement("<element $attributesString />");
+            $element = new SimpleXMLElement("<element $attributesString />");
             $attributes = $element->attributes();
         } catch (Exception $exception) {
             $attributes = [];

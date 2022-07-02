@@ -40,16 +40,6 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
         ]);
     }
 
-    public function selectorFromName(string $name, string $entryName): string
-    {
-        return join([
-            '.',
-            strtolower($name[0]),
-            '-',
-            lcfirst(substr($name, 1)),
-        ]);
-    }
-
     public function getEntryName(
         string $componentName,
         ?string $entrypointName,
@@ -67,6 +57,9 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
      * AButton
      * MContentCard
      * OPageHeader
+     *
+     * Group 1: Component Name
+     * Group 2: Properties
      *
      * @see https://regex101.com/r/3ujquL/2
      */

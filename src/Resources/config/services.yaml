@@ -4,6 +4,9 @@ services:
     autoconfigure: true
     public: false
 
+  TwigComponentTools\TCTBundle\Controller\StorybookController:
+    public: true
+
   TwigComponentTools\TCTBundle\Naming\AtomicDesignComponentNaming:
     public: true
 

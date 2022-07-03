@@ -14,7 +14,7 @@ class ComponentPreprocessor implements PreprocessorInterface
     public function __construct(ComponentNamingInterface $componentNaming)
     {
         $this->componentNaming = $componentNaming;
-        $this->componentRegex  = $this->componentNaming->getComponentRegex();
+        $this->componentRegex = $this->componentNaming->getComponentRegex();
     }
 
     /**
@@ -25,12 +25,11 @@ class ComponentPreprocessor implements PreprocessorInterface
         /**
          * @var ?\TwigComponentTools\TCTBundle\Preprocessor\Component $component
          */
-        $component     = null;
-        $code          = $source->getCode();
-        $lastPosition  = 0;
+        $component = null;
+        $code = $source->getCode();
         $hasComponents = false;
 
-        while ($this->getNextComponent($code, $lastPosition, $component)) {
+        while ($this->getNextComponent($code, $component)) {
             $hasComponents = true;
 
             $code = substr_replace(
@@ -42,6 +41,8 @@ class ComponentPreprocessor implements PreprocessorInterface
         }
 
         if ($hasComponents) {
+//            VarDumper::dump($code);
+
             return new Source($code, $source->getName(), $source->getPath());
         }
 
@@ -49,15 +50,14 @@ class ComponentPreprocessor implements PreprocessorInterface
     }
 
     /**
-     * @param string     $code         Code to search components in
-     * @param int        $lastPosition Offset at which to start searching for the next component
-     * @param ?Component $component    The component information will be saved in this array
+     * @param string     $code      Code to search components in
+     * @param ?Component $component The component information will be saved in this array
      *
      * @return bool True if it found a component
      *
      * @throws \Exception
      */
-    public function getNextComponent(string $code, int $lastPosition, ?Component &$component): bool
+    public function getNextComponent(string $code, ?Component &$component): bool
     {
         $matches = [];
 
@@ -65,8 +65,7 @@ class ComponentPreprocessor implements PreprocessorInterface
                 $this->componentRegex,
                 $code,
                 $matches,
-                PREG_OFFSET_CAPTURE,
-                $lastPosition
+                PREG_OFFSET_CAPTURE
             );
 
         if (!$found) {

@@ -2,25 +2,19 @@
 
 namespace TwigComponentTools\TCTBundle\Preprocessor;
 
-use SimpleXMLElement;
-
 class Component
 {
     public int $originalLength;
 
     public bool $isSelfClosing;
 
-    public bool $usesDefaultBlock;
-
     public int $originalEndPos;
 
     private array $blocks = [];
 
+    private array $attributes = [];
+
     private ?string $inner = null;
-
-    private SimpleXMLElement $simpleXMLElement;
-
-    private mixed $simpleXMLBLocks;
 
     /**
      * @throws \Exception
@@ -34,28 +28,55 @@ class Component
     ) {
         $startTagLength = strlen($openingTag);
 
-        $this->isSelfClosing  = '/' === $openingTag[$startTagLength - 2];
+        $this->isSelfClosing = '/' === $openingTag[$startTagLength - 2];
         $this->originalEndPos = $this->originalStartPos + $startTagLength;
 
         if (!$this->isSelfClosing) {
-            $closingTag        = "</$name>";
-            $endOfOpeningTag   = $this->originalStartPos + $startTagLength;
+            $closingTag = "</$name>";
+            $endOfOpeningTag = $this->originalStartPos + $startTagLength;
             $startOfClosingTag = strpos($code, $closingTag, $endOfOpeningTag);
 
             $this->originalEndPos = $startOfClosingTag + strlen($closingTag);
-            $this->inner          = substr($code, $endOfOpeningTag, $startOfClosingTag - $endOfOpeningTag);
+            $this->inner = substr($code, $endOfOpeningTag, $startOfClosingTag - $endOfOpeningTag);
         }
 
         $this->originalLength = $this->originalEndPos - $this->originalStartPos;
-        $fullComponentCode    = substr($code, $this->originalStartPos, $this->originalLength);
 
-        if ($this->isSelfClosing) {
-            $fullComponentCode = str_replace('/>', "></$name>", $fullComponentCode);
+        $this->parseAttributes();
+        $this->parseBlocks();
+        $this->setDefaultBlock();
+    }
+
+    private function parseAttributes(): void
+    {
+        $attributesString = str_replace(["<$this->name", '/', '>'], '', $this->openingTag);
+        $attributeMatches = [];
+        preg_match_all('/(.*)="(.*)"/', $attributesString, $attributeMatches, PREG_SET_ORDER);
+
+        foreach ($attributeMatches as $match) {
+            $name = trim($match[1]);
+            $value = $match[2];
+            $this->attributes[$name] = $value;
         }
+    }
 
-        $this->simpleXMLElement = new SimpleXMLElement($fullComponentCode);
-        $this->simpleXMLBLocks  = $this->simpleXMLElement->xpath("/$name/block");
-        $this->usesDefaultBlock = empty($this->simpleXMLBLocks);
+    private function parseBlocks(): void
+    {
+        $blockMatches = [];
+        preg_match_all('/<block.*name="(.*)">(.*)<\/block>/', $this->inner, $blockMatches, PREG_SET_ORDER);
+
+        foreach ($blockMatches as $match) {
+            $name = trim($match[1]);
+            $inner = $match[2];
+            $this->blocks[$name] = [uniqid($name), $inner];
+        }
+    }
+
+    private function setDefaultBlock(): void
+    {
+        if (empty($this->blocks) && !empty($this->inner)) {
+            $this->blocks['default'] = [uniqid('default'), $this->inner];
+        }
     }
 
     public function render(): string
@@ -77,12 +98,8 @@ class Component
     private function getTwigParameterMap(): string
     {
         $attributeObject = [];
-        $attributes      = $this->simpleXMLElement->attributes();
 
-        /**
-         * @var SimpleXMLElement $value
-         */
-        foreach ($attributes as $key => $value) {
+        foreach ($this->attributes as $key => $value) {
             $isVar = str_starts_with($value, '{{') && str_ends_with($value, '}}');
 
             if ($isVar) {
@@ -117,36 +134,17 @@ class Component
 
     private function getAllBlockSets(): ?string
     {
-        if ($this->usesDefaultBlock) {
-            return $this->getBlockSet('default', $this->inner);
-        }
-
-        if (!is_iterable($this->simpleXMLBLocks)) {
-            return null;
-        }
-
         $parts = [];
-        foreach ($this->simpleXMLBLocks as $xmlBlock) {
-            $attributes = $xmlBlock->attributes();
-            $name       = $attributes['name'];
 
-            $childParts = [];
-            foreach ($xmlBlock->children() as $child) {
-                $childParts[] = $child->asXml();
-            }
-
-            $parts[] = $this->getBlockSet($name, join(PHP_EOL, $childParts));
+        foreach ($this->blocks as [$id, $inner]) {
+            $parts[] = $this->getBlockSet($id, $inner);
         }
 
         return join(PHP_EOL, $parts);
     }
 
-    private function getBlockSet(string $name, string $contents): string
+    private function getBlockSet(string $id, string $contents): string
     {
-        $id = uniqid($name.'_');
-
-        $this->blocks[$name] = $id;
-
         return "{%- set $id -%}$contents{%- endset -%}";
     }
 
@@ -154,7 +152,7 @@ class Component
     {
         $parts = [];
 
-        foreach ($this->blocks as $name => $id) {
+        foreach ($this->blocks as $name => [$id, $inner]) {
             $parts[] = "{%- block $name -%}{{- $id -}}{%- endblock -%}";
         }
 

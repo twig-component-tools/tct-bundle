@@ -2,6 +2,7 @@
 
 namespace TwigComponentTools\TCTBundle\Preprocessor;
 
+use Symfony\Component\VarDumper\VarDumper;
 use Twig\Source;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
 

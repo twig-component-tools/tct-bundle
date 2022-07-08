@@ -2,6 +2,9 @@
 
 namespace TwigComponentTools\TCTBundle\Preprocessor;
 
+use SimpleXMLElement;
+use Symfony\Component\VarDumper\VarDumper;
+
 class Component
 {
     public int $originalLength;
@@ -12,7 +15,7 @@ class Component
 
     private array $blocks = [];
 
-    private array $attributes = [];
+    private SimpleXMLElement $element;
 
     private ?string $inner = null;
 
@@ -28,48 +31,70 @@ class Component
     ) {
         $startTagLength = strlen($openingTag);
 
-        $this->isSelfClosing = '/' === $openingTag[$startTagLength - 2];
-        $this->originalEndPos = $this->originalStartPos + $startTagLength;
+        VarDumper::dump($this->openingTag);
+        VarDumper::dump($this->openingTag[$startTagLength - 2]);
 
-        if (!$this->isSelfClosing) {
-            $closingTag = "</$name>";
-            $endOfOpeningTag = $this->originalStartPos + $startTagLength;
-            $startOfClosingTag = strpos($code, $closingTag, $endOfOpeningTag);
+        // TODO Named contexts per file! Pass by reference? {% with %} scope within all blocks in the file. Use simple string replacements.
 
-            $this->originalEndPos = $startOfClosingTag + strlen($closingTag);
-            $this->inner = substr($code, $endOfOpeningTag, $startOfClosingTag - $endOfOpeningTag);
+        $this->isSelfClosing = '/' === $this->openingTag[$startTagLength - 2];
+        $codeStartingWithComponent = $this->isSelfClosing ? $openingTag : substr($code, $this->originalStartPos);
+
+        try {
+            $this->element = new SimpleXMLElement(
+                "<tct-root>$codeStartingWithComponent</tct-root>",
+                LIBXML_PARSEHUGE | LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+            );
+        } catch (\Throwable $exception) {
+            VarDumper::dump($exception);
+            VarDumper::dump("<tct-root>$codeStartingWithComponent</tct-root>");
+die;
+            return;
         }
 
-        $this->originalLength = $this->originalEndPos - $this->originalStartPos;
+        $this->element = $this->element->children()[0];
 
-        $this->parseAttributes();
+        $this->isSelfClosing = $this->element->hasChildren();
+        $this->originalEndPos = $this->originalStartPos + $startTagLength;
+        $this->originalLength = strlen($this->element->asXML());
+
         $this->parseBlocks();
         $this->setDefaultBlock();
     }
 
-    private function parseAttributes(): void
+    /**
+     * @throws \Exception
+     */
+    private function parseBlocks(): void
     {
-        $attributesString = str_replace(["<$this->name", '/', '>'], '', $this->openingTag);
-        $attributeMatches = [];
-        preg_match_all('/(.*)="(.*)"/', $attributesString, $attributeMatches, PREG_SET_ORDER);
+        foreach ($this->element as $child) {
+            if (!$child instanceof SimpleXMLElement) {
+                continue;
+            }
 
-        foreach ($attributeMatches as $match) {
-            $name = trim($match[1]);
-            $value = $match[2];
-            $this->attributes[$name] = $value;
+            if ($child->getName() !== 'block') {
+                continue;
+            }
+
+            $nameAttribute = $child['name'];
+
+            if (!$nameAttribute instanceof SimpleXMLElement) {
+                continue;
+            }
+
+            $name = trim((string)$nameAttribute);
+            $inner = $this->innerContents($child);
+            $this->blocks[$name] = [uniqid($name), $inner];
         }
     }
 
-    private function parseBlocks(): void
+    private function innerContents(SimpleXMLElement $node): string
     {
-        $blockMatches = [];
-        preg_match_all('/<block.*name="(.*)">(.*)<\/block>/', $this->inner, $blockMatches, PREG_SET_ORDER);
+        $content = trim($node->asXML());
+        $name = $node->getName();
+        $endRootOpening = strpos($content, '>');
+        $innerLength = strlen($content) - $endRootOpening - strlen("</$name>");
 
-        foreach ($blockMatches as $match) {
-            $name = trim($match[1]);
-            $inner = $match[2];
-            $this->blocks[$name] = [uniqid($name), $inner];
-        }
+        return substr($content, $endRootOpening, $innerLength);
     }
 
     private function setDefaultBlock(): void
@@ -99,7 +124,7 @@ class Component
     {
         $attributeObject = [];
 
-        foreach ($this->attributes as $key => $value) {
+        foreach ($this->element->attributes as $key => $value) {
             $isVar = str_starts_with($value, '{{') && str_ends_with($value, '}}');
 
             if ($isVar) {

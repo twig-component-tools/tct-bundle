@@ -2,185 +2,141 @@
 
 namespace TwigComponentTools\TCTBundle\Preprocessor;
 
-use SimpleXMLElement;
-use Symfony\Component\VarDumper\VarDumper;
+use DOMAttr;
+use DOMElement;
+use DOMText;
+use Symfony\Component\String\Inflector\EnglishInflector;
 
 class Component
 {
-    public int $originalLength;
-
     public bool $isSelfClosing;
 
-    public int $originalEndPos;
-
-    private array $blocks = [];
-
-    private SimpleXMLElement $element;
-
-    private ?string $inner = null;
+    private bool $usesDefaultBlock;
 
     /**
      * @throws \Exception
      */
     public function __construct(
-        public string $openingTag,
         public string $name,
-        public string $filePath,
-        public int $originalStartPos,
-        string $code
+        public DOMElement $element,
+        public string $filePath
     ) {
-        $startTagLength = strlen($openingTag);
+        $this->isSelfClosing = !$this->element->hasChildNodes();
+        $this->usesDefaultBlock = false;
+    }
 
-        VarDumper::dump($this->openingTag);
-        VarDumper::dump($this->openingTag[$startTagLength - 2]);
+    private function createTextNode(string $data): DOMText
+    {
+        return $this->element->ownerDocument->createTextNode($data);
+    }
 
-        // TODO Named contexts per file! Pass by reference? {% with %} scope within all blocks in the file. Use simple string replacements.
+    private function replaceBlocks(): void
+    {
+        $blocks = $this->element->getElementsByTagName('block');
+        $numberOfBlocks = $blocks->length;
 
-        $this->isSelfClosing = '/' === $this->openingTag[$startTagLength - 2];
-        $codeStartingWithComponent = $this->isSelfClosing ? $openingTag : substr($code, $this->originalStartPos);
+        if (0 === $numberOfBlocks) {
+            $this->usesDefaultBlock = true;
+            $start = $this->createTextNode("{% block default %}\n{% with embedContext %}");
+            $end = $this->createTextNode("{% endwith %}\n{% endblock default %}");
 
-        try {
-            $this->element = new SimpleXMLElement(
-                "<tct-root>$codeStartingWithComponent</tct-root>",
-                LIBXML_PARSEHUGE | LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
-            );
-        } catch (\Throwable $exception) {
-            VarDumper::dump($exception);
-            VarDumper::dump("<tct-root>$codeStartingWithComponent</tct-root>");
-die;
+            $this->element->childNodes[0]->before($start); // start before first node
+            $this->element->appendChild($end); // end after all children
+
             return;
         }
 
-        $this->element = $this->element->children()[0];
+        for ($index = 0; $index < $numberOfBlocks; $index++) {
+            /**
+             * @var DOMElement $block
+             */
+            $block = $blocks->item(0); // first item is the next un-altered item
 
-        $this->isSelfClosing = $this->element->hasChildren();
-        $this->originalEndPos = $this->originalStartPos + $startTagLength;
-        $this->originalLength = strlen($this->element->asXML());
+            $name = $block->attributes['name']->value;
+            $start = $this->createTextNode("{% block $name %}\n{% with embedContext %}");
+            $end = $this->createTextNode("{% endwith %}\n{% endblock $name %}");
 
-        $this->parseBlocks();
-        $this->setDefaultBlock();
-    }
+            $block->before($end); // end before block
+            $end->before($start); // start before end
 
-    /**
-     * @throws \Exception
-     */
-    private function parseBlocks(): void
-    {
-        foreach ($this->element as $child) {
-            if (!$child instanceof SimpleXMLElement) {
-                continue;
-            }
+            $childNodes = iterator_to_array($block->childNodes->getIterator());
+            $end->before(...$childNodes); // child before end
 
-            if ($child->getName() !== 'block') {
-                continue;
-            }
-
-            $nameAttribute = $child['name'];
-
-            if (!$nameAttribute instanceof SimpleXMLElement) {
-                continue;
-            }
-
-            $name = trim((string)$nameAttribute);
-            $inner = $this->innerContents($child);
-            $this->blocks[$name] = [uniqid($name), $inner];
+            $block->remove();
         }
     }
 
-    private function innerContents(SimpleXMLElement $node): string
-    {
-        $content = trim($node->asXML());
-        $name = $node->getName();
-        $endRootOpening = strpos($content, '>');
-        $innerLength = strlen($content) - $endRootOpening - strlen("</$name>");
-
-        return substr($content, $endRootOpening, $innerLength);
-    }
-
-    private function setDefaultBlock(): void
-    {
-        if (empty($this->blocks) && !empty($this->inner)) {
-            $this->blocks['default'] = [uniqid('default'), $this->inner];
-        }
-    }
-
-    public function render(): string
+    public function getTranspiledNodes(): array
     {
         if ($this->isSelfClosing) {
-            return $this->renderInclude();
+            $includeNode = $this->transpileInclude();
+
+            return [$includeNode];
         }
 
-        return $this->renderEmbed();
-    }
-
-    private function renderInclude(): string
-    {
-        $parameterMap = $this->getTwigParameterMap();
-
-        return "{% include '$this->filePath' with { props: { $parameterMap } } %}";
+        return $this->transpileEmbed();
     }
 
     private function getTwigParameterMap(): string
     {
         $attributeObject = [];
 
-        foreach ($this->element->attributes as $key => $value) {
-            $isVar = str_starts_with($value, '{{') && str_ends_with($value, '}}');
+        foreach ($this->element->attributes as $attribute) {
+            if (!$attribute instanceof DOMAttr) {
+                continue;
+            }
+
+            $stringValue = $attribute->value;
+            $key = $attribute->name;
+
+            $isVar = str_starts_with($stringValue, '{{') && str_ends_with($stringValue, '}}');
 
             if ($isVar) {
-                $value = trim(substr($value, 2, -2));
+                $stringValue = trim(substr($stringValue, 2, -2));
             }
 
             $escape = $isVar ? '' : '\'';
 
             if (!$isVar) {
-                $value = str_replace('\'', '\\\'', $value);
+                $stringValue = str_replace('\'', '\\\'', $stringValue);
             }
 
-            $attributeObject[] = "$key: $escape$value$escape";
+            if (empty($stringValue)) {
+                $stringValue = 'true';
+            }
+
+            if (str_contains($key, '-')) {
+                $key = ucwords($key, '-');
+                $key = str_replace('-', '', $key);
+                $key = lcfirst($key);
+            }
+
+            $attributeObject[] = "$key: $escape$stringValue$escape";
         }
 
         return implode(', ', $attributeObject);
     }
 
-    private function renderEmbed(): string
+    private function transpileInclude(): DOMText
     {
         $parameterMap = $this->getTwigParameterMap();
 
-        $parts = array_filter([
-            $this->getAllBlockSets(),
-            "{% embed '$this->filePath' with { props: { $parameterMap } } %}",
-            $this->getAllBlockPrints(),
-            '{% endembed %}',
-        ]);
-
-        return join(PHP_EOL, $parts);
+        return $this->createTextNode("{% include '$this->filePath' with { props: { $parameterMap } } %}");
     }
 
-    private function getAllBlockSets(): ?string
+    private function transpileEmbed(): array
     {
-        $parts = [];
+        $this->replaceBlocks();
+        $parameterMap = $this->getTwigParameterMap();
 
-        foreach ($this->blocks as [$id, $inner]) {
-            $parts[] = $this->getBlockSet($id, $inner);
-        }
+        $start = $this->createTextNode(
+            "{% embed '$this->filePath' with { props: { $parameterMap }, embedContext: _context } %}"
+        );
+        $end = $this->createTextNode("{% endembed %}");
 
-        return join(PHP_EOL, $parts);
-    }
+        $this->element->childNodes[0]->before($start); // start before first child
+        $this->element->appendChild($end); // end after all children
 
-    private function getBlockSet(string $id, string $contents): string
-    {
-        return "{%- set $id -%}$contents{%- endset -%}";
-    }
-
-    private function getAllBlockPrints(): ?string
-    {
-        $parts = [];
-
-        foreach ($this->blocks as $name => [$id, $inner]) {
-            $parts[] = "{%- block $name -%}{{- $id -}}{%- endblock -%}";
-        }
-
-        return join(PHP_EOL, $parts);
+        return iterator_to_array($this->element->childNodes->getIterator());
     }
 }

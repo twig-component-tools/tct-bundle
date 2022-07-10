@@ -2,6 +2,8 @@
 
 namespace TwigComponentTools\TCTBundle\Preprocessor;
 
+use DOMDocument;
+use DOMElement;
 use Symfony\Component\VarDumper\VarDumper;
 use Twig\Source;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
@@ -23,70 +25,64 @@ class ComponentPreprocessor implements PreprocessorInterface
      */
     public function processSourceContext(Source $source): Source
     {
-        /**
-         * @var ?\TwigComponentTools\TCTBundle\Preprocessor\Component $component
-         */
-        $component = null;
         $code = $source->getCode();
-        $hasComponents = false;
+        $components = $this->getComponentList($code);
 
-        while ($this->getNextComponent($code, $component)) {
-            $hasComponents = true;
-
-            $code = substr_replace(
-                $code,
-                $component->render(),
-                $component->originalStartPos,
-                $component->originalLength
-            );
+        if (empty($components)) {
+            return $source;
         }
 
-        if ($hasComponents) {
-//            VarDumper::dump($code);
+        libxml_use_internal_errors(true);
+        $dom = new DOMDocument;
+        $dom->loadHTML("<tct-root>$code</tct-root>", LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_use_internal_errors(false);
 
-            return new Source($code, $source->getName(), $source->getPath());
+        foreach ($components as $componentName) {
+            $templatePath = $this->componentNaming->pathFromComponentName($componentName);
+            $selector = strtolower($componentName);
+            $componentNodeList = $dom->getElementsByTagName($selector);
+            $numberOfComponents = $componentNodeList->length;
+
+            for ($index = 0; $index < $numberOfComponents; $index ++)
+            {
+                /**
+                 * @var DOMElement $componentNode
+                 */
+                $componentNode = $componentNodeList->item(0); // $componentNodeList is "live" -> The first item will always be the next non-altered item.
+
+                $component = new Component($componentName, $componentNode, $templatePath);
+                $transpiledNodes = $component->getTranspiledNodes();
+                $fragment = $dom->createDocumentFragment();
+
+                foreach ($transpiledNodes as $transpiledNode) {
+                    $fragment->appendChild($transpiledNode);
+                }
+
+                $componentNode->parentNode->replaceChild($fragment, $componentNode);
+            }
         }
 
-        return $source;
+        $transpiledCode = '';
+        foreach ($dom->firstChild->childNodes as $node) {
+            $transpiledCode .= $dom->saveHTML($node);
+        }
+
+        VarDumper::dump($transpiledCode);
+
+        return new Source($transpiledCode, $source->getName(), $source->getPath());
     }
 
-    /**
-     * @param string     $code      Code to search components in
-     * @param ?Component $component The component information will be saved in this array
-     *
-     * @return bool True if it found a component
-     *
-     * @throws \Exception
-     */
-    public function getNextComponent(string $code, ?Component &$component): bool
+    private function getComponentList(string $code): ?array
     {
         $matches = [];
 
-        $found = 1 === preg_match(
-                $this->componentRegex,
-                $code,
-                $matches,
-                PREG_OFFSET_CAPTURE
-            );
-
-        if (!$found) {
-            return false;
-        }
-
-        list($fullMatch, $nameMatch) = $matches;
-        list($openingTag, $start) = $fullMatch;
-        list($name) = $nameMatch;
-
-        $path = $this->componentNaming->pathFromComponentName($name);
-
-        $component = new Component(
-            $openingTag,
-            $name,
-            $path,
-            $start,
-            $code
+        preg_match_all(
+            $this->componentRegex,
+            $code,
+            $matches,
+            PREG_PATTERN_ORDER
         );
 
-        return true;
+        return array_unique($matches[1 /* Name Matches */]);
     }
 }

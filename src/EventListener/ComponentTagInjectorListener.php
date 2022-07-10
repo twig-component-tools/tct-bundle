@@ -5,6 +5,7 @@ namespace TwigComponentTools\TCTBundle\EventListener;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\VarDumper\VarDumper;
 use TwigComponentTools\TCTBundle\Loader\ComponentLoaderInterface;
 use TwigComponentTools\TCTBundle\TagRenderer\ComponentTagRenderInterface;
 
@@ -34,7 +35,6 @@ class ComponentTagInjectorListener implements EventSubscriberInterface
         $response         = $event->getResponse();
         $content          = $response->getContent();
         $loadedComponents = $this->componentLoader->getLoadedComponents();
-
         if (empty($loadedComponents)) {
             return;
         }
@@ -44,7 +44,6 @@ class ComponentTagInjectorListener implements EventSubscriberInterface
 
         $bodyTags = $this->componentTagRenderer->renderBodyTags($loadedComponents);
         $content  = $this->injectAtTag($content, 'TCT-BodyEntries', $bodyTags);
-
         $response->setContent($content);
     }
 

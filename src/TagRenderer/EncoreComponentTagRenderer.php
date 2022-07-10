@@ -2,6 +2,7 @@
 
 namespace TwigComponentTools\TCTBundle\TagRenderer;
 
+use Symfony\Component\VarDumper\VarDumper;
 use Symfony\WebpackEncoreBundle\Asset\TagRenderer;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
 

@@ -4,6 +4,7 @@ namespace TwigComponentTools\TCTBundle\Preprocessor;
 
 use DOMDocument;
 use DOMElement;
+use Symfony\Component\VarDumper\VarDumper;
 use Twig\Source;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
 
@@ -32,8 +33,9 @@ class ComponentPreprocessor implements PreprocessorInterface
         }
 
         libxml_use_internal_errors(true);
-        $dom = new DOMDocument;
-        $dom->loadHTML("<tct-root>$code</tct-root>", LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NOXMLDECL);
+        $dom = new DOMDocument();
+        $parsingCode = mb_convert_encoding("<tct-root>$code</tct-root>", 'HTML-ENTITIES', 'UTF-8');
+        $dom->loadHTML($parsingCode, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NOXMLDECL);
         libxml_use_internal_errors(false);
 
         foreach ($components as $componentName) {
@@ -69,7 +71,15 @@ class ComponentPreprocessor implements PreprocessorInterface
             $transpiledCode .= $dom->saveHTML($node);
         }
 
-        $transpiledCode = preg_replace("/%7B%7B%20(.*)%20%7D%7D/", '{{ $1 }}', $transpiledCode);
+        $transpiledCode = preg_replace_callback(
+            "/(src|href)=\"(.*)\"/",
+            function ($match) {
+                $attribute = $match[1];
+                $value = urldecode($match[2]);
+                return "$attribute=\"$value\"";
+            },
+            $transpiledCode
+        );
 
         return new Source($transpiledCode, $source->getName(), $source->getPath());
     }

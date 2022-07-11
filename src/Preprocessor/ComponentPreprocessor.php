@@ -4,7 +4,6 @@ namespace TwigComponentTools\TCTBundle\Preprocessor;
 
 use DOMDocument;
 use DOMElement;
-use Symfony\Component\VarDumper\VarDumper;
 use Twig\Source;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
 
@@ -66,8 +65,6 @@ class ComponentPreprocessor implements PreprocessorInterface
         foreach ($dom->firstChild->childNodes as $node) {
             $transpiledCode .= $dom->saveHTML($node);
         }
-
-        VarDumper::dump($transpiledCode);
 
         return new Source($transpiledCode, $source->getName(), $source->getPath());
     }

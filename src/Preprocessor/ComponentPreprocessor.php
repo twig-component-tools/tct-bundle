@@ -33,7 +33,7 @@ class ComponentPreprocessor implements PreprocessorInterface
 
         libxml_use_internal_errors(true);
         $dom = new DOMDocument;
-        $dom->loadHTML("<tct-root>$code</tct-root>", LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $dom->loadHTML("<tct-root>$code</tct-root>", LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NOXMLDECL);
         libxml_use_internal_errors(false);
 
         foreach ($components as $componentName) {
@@ -61,8 +61,10 @@ class ComponentPreprocessor implements PreprocessorInterface
             }
         }
 
+        $root = $dom->getElementsByTagName('tct-root')[0];
+
         $transpiledCode = '';
-        foreach ($dom->firstChild->childNodes as $node) {
+        foreach ($root->childNodes as $node) {
             $transpiledCode .= $dom->saveHTML($node);
         }
 

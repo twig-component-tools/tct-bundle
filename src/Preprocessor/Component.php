@@ -86,7 +86,7 @@ class Component
                 continue;
             }
 
-            $stringValue = $attribute->value;
+            $stringValue = urldecode($attribute->value);
             $key = $attribute->name;
 
             $isVar = str_starts_with($stringValue, '{{') && str_ends_with($stringValue, '}}');

@@ -9,13 +9,14 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class StorybookController extends AbstractController
 {
-    #[
-        Route(
-            path: '/',
-            name: 'tct_render_storybook',
-            methods: ['POST']
-        )
-    ]
+    /**
+     * @Route (
+     *     path="/",
+     *     name="tct_render_storybook",
+     *     methods={"POST"}
+     * )
+     */
+    #[Route(path: '/', name: 'tct_render_storybook', methods: ['POST'])]
     public function storybookComponent(Request $request): Response
     {
         $template = $request->request->get('template');

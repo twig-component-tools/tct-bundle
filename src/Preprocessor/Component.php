@@ -9,19 +9,23 @@ use DOMText;
 class Component
 {
     public bool $isSelfClosing;
+    public string $name;
+    public DOMElement $element;
+    public string $filePath;
 
-    private bool $usesDefaultBlock;
 
     /**
      * @throws \Exception
      */
     public function __construct(
-        public string $name,
-        public DOMElement $element,
-        public string $filePath
+        string $name,
+        DOMElement $element,
+        string $filePath
     ) {
+        $this->filePath = $filePath;
+        $this->element = $element;
+        $this->name = $name;
         $this->isSelfClosing = !$this->element->hasChildNodes();
-        $this->usesDefaultBlock = false;
     }
 
     private function createTextNode(string $data): DOMText
@@ -35,7 +39,6 @@ class Component
         $numberOfBlocks = $blocks->length;
 
         if (0 === $numberOfBlocks) {
-            $this->usesDefaultBlock = true;
             $start = $this->createTextNode("{% block default %}\n{% with embedContext %}");
             $end = $this->createTextNode("{% endwith %}\n{% endblock default %}");
 
@@ -88,7 +91,7 @@ class Component
             $stringValue = urldecode($attribute->value);
             $key = $attribute->name;
 
-            $isVar = str_starts_with($stringValue, '{{') && str_ends_with($stringValue, '}}');
+            $isVar = strpos($stringValue, '{{') === 0 && strpos($stringValue, '}}') === strlen($stringValue) - 1;
 
             if ($isVar) {
                 $stringValue = trim(substr($stringValue, 2, -2));
@@ -104,7 +107,7 @@ class Component
                 $stringValue = 'true';
             }
 
-            if (str_contains($key, '-')) {
+            if (strpos($key, '-') !== FALSE) {
                 $key = ucwords($key, '-');
                 $key = str_replace('-', '', $key);
                 $key = lcfirst($key);

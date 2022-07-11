@@ -42,12 +42,13 @@ class ComponentPreprocessor implements PreprocessorInterface
             $componentNodeList = $dom->getElementsByTagName($selector);
             $numberOfComponents = $componentNodeList->length;
 
-            for ($index = 0; $index < $numberOfComponents; $index ++)
-            {
+            for ($index = 0; $index < $numberOfComponents; $index++) {
                 /**
                  * @var DOMElement $componentNode
                  */
-                $componentNode = $componentNodeList->item(0); // $componentNodeList is "live" -> The first item will always be the next non-altered item.
+                $componentNode = $componentNodeList->item(
+                    0
+                ); // $componentNodeList is "live" -> The first item will always be the next non-altered item.
 
                 $component = new Component($componentName, $componentNode, $templatePath);
                 $transpiledNodes = $component->getTranspiledNodes();
@@ -67,6 +68,8 @@ class ComponentPreprocessor implements PreprocessorInterface
         foreach ($root->childNodes as $node) {
             $transpiledCode .= $dom->saveHTML($node);
         }
+
+        $transpiledCode = preg_replace("/%7B%7B(\w+)%7D%7D/", '{{$1}}', $transpiledCode);
 
         return new Source($transpiledCode, $source->getName(), $source->getPath());
     }

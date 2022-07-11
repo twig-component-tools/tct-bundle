@@ -5,8 +5,6 @@ namespace TwigComponentTools\TCTBundle\Preprocessor;
 use DOMAttr;
 use DOMElement;
 use DOMText;
-use Symfony\Component\String\Inflector\EnglishInflector;
-use Symfony\Component\VarDumper\VarDumper;
 
 class Component
 {
@@ -111,8 +109,6 @@ class Component
                 $key = str_replace('-', '', $key);
                 $key = lcfirst($key);
             }
-
-            VarDumper::dump($stringValue);
 
             $attributeObject[] = "$key: $escape$stringValue$escape";
         }

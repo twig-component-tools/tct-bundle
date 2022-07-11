@@ -69,7 +69,7 @@ class ComponentPreprocessor implements PreprocessorInterface
             $transpiledCode .= $dom->saveHTML($node);
         }
 
-        $transpiledCode = preg_replace("/%7B%7B(\w+)%7D%7D/", '{{$1}}', $transpiledCode);
+        $transpiledCode = preg_replace("/%7B%7B%20(.*)%20%7D%7D/", '{{ $1 }}', $transpiledCode);
 
         return new Source($transpiledCode, $source->getName(), $source->getPath());
     }

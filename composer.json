@@ -18,11 +18,11 @@
     "php": "^7.4||^8.1",
     "ext-simplexml": "*",
     "twig/twig": "^3.3",
-    "symfony/http-kernel": "^5.4|^6.1",
+    "symfony/http-kernel": "^4.4|^5.4|^6.1",
     "symfony/webpack-encore-bundle": "^v1.15",
-    "symfony/dependency-injection": "^5.4|^6.1",
-    "symfony/twig-bridge": "^5.4|^6.1",
-    "symfony/twig-bundle": "^5.4|^6.1"
+    "symfony/dependency-injection": "^4.4|^5.4|^6.1",
+    "symfony/twig-bridge": "^4.4|^5.4|^6.1",
+    "symfony/twig-bundle": "^4.4|^5.4|^6.1"
   },
   "archive": {
     "exclude": [

@@ -105,7 +105,7 @@ class Component
             $stringValue = urldecode($attribute->value);
             $key = $attribute->name;
 
-            $isVar = strpos($stringValue, '{{') === 0 && strpos($stringValue, '}}') === strlen($stringValue) - 1;
+            $isVar = strpos($stringValue, '{{') === 0 && strpos($stringValue, '}}') === strlen($stringValue) - 2;
 
             if ($isVar) {
                 $stringValue = trim(substr($stringValue, 2, -2));

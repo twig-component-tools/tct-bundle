@@ -16,7 +16,7 @@
   ],
   "require": {
     "php": "^7.4||^8.1",
-    "ext-simplexml": "*",
+    "ext-dom": "*",
     "twig/twig": "^3.3",
     "symfony/http-kernel": "^4.4|^5.4|^6.1",
     "symfony/webpack-encore-bundle": "^v1.15",

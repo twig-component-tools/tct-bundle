@@ -41,8 +41,12 @@ class Component
         if (0 === $numberOfBlocks) {
             $start = $this->createTextNode("{% block default %}\n{% with embedContext %}");
             $end = $this->createTextNode("{% endwith %}\n{% endblock default %}");
+            /**
+             * @var \DOMNodeList $children
+             */
+            $children = $this->element->childNodes;
 
-            $this->element->insertBefore($start, $this->element->childNodes[0]); // start before first node
+            $this->element->insertBefore($start, $children->item(0)); // start before first node
             $this->element->appendChild($end); // end after all children
 
             return;
@@ -61,9 +65,12 @@ class Component
             $end = $this->element->insertBefore($end, $block); // end before block
             $start = $this->element->insertBefore($start, $end); // start before end
 
-            $childNodes = iterator_to_array($block->childNodes->getIterator());
-            foreach($childNodes as $childNode) {
-                $this->element->insertBefore($childNode, $end);
+            /**
+             * @var \DOMNodeList $children
+             */
+            $children = $this->element->childNodes;
+            for($index = $children->length - 1; $index >= 0; $index--) {
+                $this->element->insertBefore($children->item($index), $end);
             }
 
             $block->remove();
@@ -138,9 +145,15 @@ class Component
         );
         $end = $this->createTextNode("{% endembed %}");
 
-        $this->element->insertBefore($start, $this->element->childNodes[0]);
+
+        /**
+         * @var \DOMNodeList $children
+         */
+        $children = $this->element->childNodes;
+
+        $this->element->insertBefore($start, $children->item(0));
         $this->element->appendChild($end); // end after all children
 
-        return iterator_to_array($this->element->childNodes->getIterator());
+        return iterator_to_array($children);
     }
 }

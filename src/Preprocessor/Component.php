@@ -12,19 +12,18 @@ class Component
     public string $name;
     public DOMElement $element;
     public string $filePath;
+    public string $embedId;
 
-
-    /**
-     * @throws \Exception
-     */
     public function __construct(
         string $name,
         DOMElement $element,
-        string $filePath
+        string $filePath,
+        string $embedId
     ) {
         $this->filePath = $filePath;
         $this->element = $element;
         $this->name = $name;
+        $this->embedId = $embedId;
         $this->isSelfClosing = !$this->element->hasChildNodes();
     }
 
@@ -43,7 +42,7 @@ class Component
 
     private function getBlockNodes(string $name): array
     {
-        $start = $this->createTextNode("{% block $name %}\n{% with embedContext %}");
+        $start = $this->createTextNode("{% block $name %}\n{% with { props: $this->embedId } %}");
         $end = $this->createTextNode("{% endwith %}\n{% endblock $name %}");
 
         return [$start, $end];
@@ -147,7 +146,7 @@ class Component
         $parameterMap = $this->getTwigParameterMap();
 
         $start = $this->createTextNode(
-            "{% embed '$this->filePath' with { props: { $parameterMap }, embedContext: _context } %}"
+            "{% embed '$this->filePath' with { props: { $parameterMap }, $this->embedId } %}"
         );
         $end = $this->createTextNode("{% endembed %}");
 

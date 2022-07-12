@@ -20,6 +20,7 @@ Components can be used within regular Twig templates:
   <AButton
     theme="primary"
     label="{{ 'button.edit_entity'|trans }}"
+    enabled
   />
 {% endblock %}
 ```
@@ -27,21 +28,92 @@ Components can be used within regular Twig templates:
 ```twig
 {# File: @components/Atom/AButton/AButton.twig #}
 
-<button type="button" class="a-button -{{ props.theme|default('grey') }}">
+<button 
+  type="button"
+  class="a-button -{{ props.theme|default('grey') }}"
+  {% if not enabled %}disabled{% endif %}
+>
   {{ props.label }}
 </button>
 ```
 
 ## Properties
 
-Props passed to your components can be either hard-coded strings (example: `theme`), or variables and expressions (
-example: `level`). They will be scoped in the object `props`.
+You can pass different data types to you components. Anything in twig is permitted, as long as it fits between `{{`
+and `}}`.
+All props can be found in the `props` object within the component.
+
+Properties are passed in `kebab-case` and will be parsed to `camelCase`.
+
+### Strings
+
+Hard-coded values will be passes as strings.
+
+```twig
+<ALabel theme="danger"/>
+```
+
+### Boolean
+
+properties are `true` if present, "falsy" (null or undefined) if absent. You can also explicitly pass a value.
+
+```twig
+<ALabel 
+  theme="danger"
+  has-options
+  is-something="{{ count < 10 }}"
+/>
+```
+
+### Expressions
 
 ```twig
 <ALabel
-  theme="danger"
-  level="{{ errors|count * 10 }}"
+  text-color="{{ themes.dark }}"
+  badge="{{ 'label.badge'|trans ~ ' ' ~ count|number_format }}"
+  image="{{ 
+    [
+      theme.default,
+      count,
+      '.',
+      imageFormat
+    ]|join('-') 
+  }}"
 />
+```
+
+### Using Props
+
+Example usage and output from the snippets above:
+
+```twig
+{# file: ALabel.twig #}
+{{ props.theme }} {# string #}
+{{ props.hasOptions }} {# Boolean (true) #}
+{{ props.isSomething }} {# Boolean (true/false) #}
+{{ props.textColor }} {# mixed (theme.dark) #}
+{{ props.badge }} {# string (e.g. 'Profiles: 12' #}
+{{ props.image }} {# string (e.g. 'dark-3.jpg' #}
+```
+
+### Defaults & constants
+
+Use twigs `merge` method to define default values. Invert the statement to override props and create constants across
+all instances of the props.
+
+```twig
+{# default values #}
+{% set props = {
+  theme: 'light',
+  count: 0
+}|merge(props) %}
+```
+
+```twig
+{# constant props #}
+{% set props = props|merge({
+  padding: 3 
+}) %}
 ```
 
 ## Blocks
@@ -65,7 +137,7 @@ Blocks can be defined and used like in any regular twig template. There are a fe
 {# File: @components/Atom/AButton/AButton.twig #}
 
 <button type="button" class="a-button -{{ props.theme|default('grey') }}">
-  {% block AButton_default %}{% endblock %}
+  {% block default %}{% endblock %}
 </button>
 ```
 
@@ -77,10 +149,10 @@ Blocks can be defined and used like in any regular twig template. There are a fe
 
 {% block contents %} 
   <AButton theme="primary">
-    <block #icon>
+    <block name="icon">
       <span>&times;</span>
     </block>
-    <block #label>{{ 'button.edit_entity'|trans }}</block>
+    <block name="label">{{ 'button.edit_entity'|trans }}</block>
   </AButton>
 {% endblock %}
 ```
@@ -115,11 +187,13 @@ Understanding what is transpiled to what can help you master this new syntax:
 TCT In:
 
 ```twig
+  {% set props = { count: 3 } %}
+
   <AButton theme="primary">
-    <block #icon>
-      <span>&times;</span>
+    <block name="icon">
+      <span>{{ props.count }}&nbsp;&times;</span>
     </block>
-    <block #label>{{ 'button.edit_entity'|trans }}</block>
+    <block name="label">{{ 'button.edit_entity'|trans }}</block>
   </AButton>
   
   <AIcon name="{{ random_name() }}"/>
@@ -128,13 +202,19 @@ TCT In:
 Twig Out:
 
 ```twig
- {% embed '@components/Atom/AButton/AButton.twig' with { theme: "primary" } only %}
+ {% set props = { count: 3 } %}
+
+ {% embed '@components/Atom/AButton/AButton.twig' with { props: { theme: "primary" }, embedContext: _context } only %}
     {% block icon %}
-      <span>&times;</span>
+      {% with embedContext %}
+        <span>{{ props.count }}&nbsp;&times;</span>
+      {% endwith %}
     {% endblock %}
     
     {% block label %}
-      {{ 'button.edit_entity'|trans }}
+      {% with embedContext %}
+        {{ 'button.edit_entity'|trans }}
+      {% endwith %}
     {% endblock %}
  {% endembed %} 
  

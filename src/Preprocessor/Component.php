@@ -42,7 +42,7 @@ class Component
             $start = $this->createTextNode("{% block default %}\n{% with embedContext %}");
             $end = $this->createTextNode("{% endwith %}\n{% endblock default %}");
 
-            $this->element->childNodes[0]->before($start); // start before first node
+            $this->element->insertBefore($start, $this->element->childNodes[0]); // start before first node
             $this->element->appendChild($end); // end after all children
 
             return;
@@ -58,11 +58,13 @@ class Component
             $start = $this->createTextNode("{% block $name %}\n{% with embedContext %}");
             $end = $this->createTextNode("{% endwith %}\n{% endblock $name %}");
 
-            $block->before($end); // end before block
-            $end->before($start); // start before end
+            $end = $this->element->insertBefore($end, $block); // end before block
+            $start = $this->element->insertBefore($start, $end); // start before end
 
             $childNodes = iterator_to_array($block->childNodes->getIterator());
-            $end->before(...$childNodes); // child before end
+            foreach($childNodes as $childNode) {
+                $this->element->insertBefore($childNode, $end);
+            }
 
             $block->remove();
         }
@@ -136,7 +138,7 @@ class Component
         );
         $end = $this->createTextNode("{% endembed %}");
 
-        $this->element->childNodes[0]->before($start); // start before first child
+        $this->element->insertBefore($start, $this->element->childNodes[0]);
         $this->element->appendChild($end); // end after all children
 
         return iterator_to_array($this->element->childNodes->getIterator());

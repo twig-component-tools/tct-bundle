@@ -66,7 +66,7 @@ class ComponentPreprocessor implements PreprocessorInterface
 
         $root = $dom->getElementsByTagName('tct-root')[0];
 
-        $transpiledCode = '';
+        $transpiledCode = "";
         foreach ($root->childNodes as $node) {
             $transpiledCode .= $dom->saveHTML($node);
         }
@@ -80,6 +80,8 @@ class ComponentPreprocessor implements PreprocessorInterface
             },
             $transpiledCode
         );
+
+        VarDumper::dump($transpiledCode);
 
         return new Source($transpiledCode, $source->getName(), $source->getPath());
     }

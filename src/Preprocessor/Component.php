@@ -33,14 +33,29 @@ class Component
         return $this->element->ownerDocument->createTextNode($data);
     }
 
+    private function getOwnBlocks(): array
+    {
+        return array_filter(
+            iterator_to_array($this->element->childNodes),
+            fn($child) => $child instanceof DOMElement && $child->tagName === 'block'
+        );
+    }
+
+    private function getBlockNodes(string $name): array
+    {
+        $start = $this->createTextNode("{% block $name %}\n{% with embedContext %}");
+        $end = $this->createTextNode("{% endwith %}\n{% endblock $name %}");
+
+        return [$start, $end];
+    }
+
     private function replaceBlocks(): void
     {
-        $blocks = $this->element->getElementsByTagName('block');
-        $numberOfBlocks = $blocks->length;
+        $blocks = $this->getOwnBlocks();
 
-        if (0 === $numberOfBlocks) {
-            $start = $this->createTextNode("{% block default %}\n{% with embedContext %}");
-            $end = $this->createTextNode("{% endwith %}\n{% endblock default %}");
+        if (empty($blocks)) {
+            list($start, $end) = $this->getBlockNodes('default');
+
             /**
              * @var \DOMNodeList $children
              */
@@ -52,28 +67,19 @@ class Component
             return;
         }
 
-        for ($index = 0; $index < $numberOfBlocks; $index++) {
-            /**
-             * @var DOMElement $block
-             */
-            $block = $blocks->item(0); // first item is the next un-altered item
-
+        foreach ($blocks as $block) {
             $name = $block->attributes['name']->value;
-            $start = $this->createTextNode("{% block $name %}\n{% with embedContext %}");
-            $end = $this->createTextNode("{% endwith %}\n{% endblock $name %}");
+            list($start, $end) = $this->getBlockNodes($name);
 
             $end = $this->element->insertBefore($end, $block); // end before block
             $start = $this->element->insertBefore($start, $end); // start before end
 
-            /**
-             * @var \DOMNodeList $children
-             */
-            $children = $this->element->childNodes;
-            for($index = $children->length - 1; $index >= 0; $index--) {
-                $this->element->insertBefore($children->item($index), $end);
+            $numberOfChildren = $block->childNodes->length;
+            foreach (range(0, $numberOfChildren - 1) as $childIndex) {
+                $this->element->insertBefore($block->childNodes->item(0), $end);
             }
 
-            $block->remove();
+            $this->element->removeChild($block);
         }
     }
 
@@ -116,7 +122,7 @@ class Component
                 $stringValue = 'true';
             }
 
-            if (strpos($key, '-') !== FALSE) {
+            if (strpos($key, '-') !== false) {
                 $key = ucwords($key, '-');
                 $key = str_replace('-', '', $key);
                 $key = lcfirst($key);

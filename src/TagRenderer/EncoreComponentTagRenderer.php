@@ -16,7 +16,7 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
         TagRenderer $tagRenderer
     ) {
         $this->componentNaming = $componentNaming;
-        $this->tagRenderer     = $tagRenderer;
+        $this->tagRenderer = $tagRenderer;
     }
 
     public function renderTags(
@@ -31,7 +31,6 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
 
         foreach ($loadedComponents as $name) {
             $entryName = $this->componentNaming->getEntryName($name, $entrypointName, $extraAttributes, $type);
-            $selector  = $this->componentNaming->selectorFromName($name, $entryName);
 
             $jsTags = $this->tagRenderer->renderWebpackScriptTags(
                 $entryName,
@@ -42,11 +41,18 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
 
             $jsTags = preg_replace(
                 "/$entryName(\..*)?\.js\"/",
-                "$entryName$1.js\" data-class-name=\"$name\" data-selector=\"$selector\"",
+                "$entryName$1.js\" data-component=\"$name\"",
                 $jsTags
             );
 
             $tags[] = $jsTags;
+
+            $tags[] = $this->tagRenderer->renderWebpackLinkTags(
+                'style-'.$entryName,
+                $packageName,
+                $entrypointName,
+                $extraAttributes
+            );
 
             $tags[] = $this->tagRenderer->renderWebpackLinkTags(
                 $entryName,
@@ -63,11 +69,11 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
 
     public function renderHeadTags(array $loadedComponents): string
     {
-        return $this->renderTags($loadedComponents, ['async' => true, 'defer' => true], 'head');
+        return $this->renderTags($loadedComponents, ['async' => false, 'defer' => false], 'head');
     }
 
     public function renderBodyTags(array $loadedComponents): string
     {
-        return $this->renderTags($loadedComponents);
+        return $this->renderTags($loadedComponents, ['async' => false, 'defer' => true]);
     }
 }

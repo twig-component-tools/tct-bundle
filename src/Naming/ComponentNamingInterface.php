@@ -8,8 +8,6 @@ interface ComponentNamingInterface
 
     public function pathFromComponentName(string $componentName): string;
 
-    public function selectorFromName(string $name, string $entryName): string;
-
     public function getEntryName(string $componentName, ?string $entrypointName, array $extraAttributes, string $type);
 
     public function getComponentRegex(): string;

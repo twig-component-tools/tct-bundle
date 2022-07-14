@@ -65,7 +65,7 @@ Blocks can be defined and used like in any regular twig template. There are a fe
 {# File: @components/Atom/AButton/AButton.twig #}
 
 <button type="button" class="a-button -{{ props.theme|default('grey') }}">
-  {% block AButton_default %}{% endblock %}
+  {% block AButton__default %}{% endblock %}
 </button>
 ```
 

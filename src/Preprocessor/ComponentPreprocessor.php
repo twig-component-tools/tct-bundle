@@ -2,8 +2,11 @@
 
 namespace TwigComponentTools\TCTBundle\Preprocessor;
 
-use Exception;
-use SimpleXMLElement;
+use DOMAttr;
+use DOMDocument;
+use DOMElement;
+use DOMNamedNodeMap;
+use DOMNodeList;
 use Symfony\Component\VarDumper\VarDumper;
 use Twig\Source;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
@@ -24,8 +27,8 @@ class ComponentPreprocessor implements PreprocessorInterface
     {
         $nextComponent = [];
         $components = [];
-        $code = $source->getCode();
         $lastPosition = 0;
+        $code = $this->getSanitizedCode($source);
         $embedId = $this->getEmbedId($source);
 
         while ($this->getNextComponent($code, $lastPosition, $nextComponent)) {
@@ -67,6 +70,29 @@ class ComponentPreprocessor implements PreprocessorInterface
         return $source;
     }
 
+    /**
+     * @see https://regex101.com/r/eVctpW/1
+     * @noinspection PhpUnnecessaryLocalVariableInspection
+     */
+    private function getSanitizedCode(Source $source): string
+    {
+        $code = $source->getCode();
+        $code = preg_replace("/\{#.*#}/sU", '', $code);
+
+        return $code;
+    }
+
+    private function createDOMDocument(string $code): DOMDocument
+    {
+        libxml_use_internal_errors(true);
+        $document = new DOMDocument();
+        $parsingCode = mb_convert_encoding("<tct-root>$code</tct-root>", 'HTML-ENTITIES', 'UTF-8');
+        $document->loadHTML($parsingCode, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NOXMLDECL);
+        libxml_use_internal_errors(false);
+
+        return $document;
+    }
+
     public function getNextComponent(string $code, int $lastPosition, array &$component): bool
     {
         $matches = [];
@@ -83,15 +109,36 @@ class ComponentPreprocessor implements PreprocessorInterface
             return false;
         }
 
-        $tag = $matches[0][0];
-        $length = strlen($tag);
+        $fullMatch = $matches[0][0];
         $start = $matches[0][1];
+        $name = $matches[1][0];
+        $selector = strtolower($name);
+        $document = $this->createDOMDocument(substr($code, $start));
+        $root = $document->childNodes->item(0);
+
+        if (!$root instanceof DOMElement) {
+            return false;
+        }
+
+        $componentElement = $root->childNodes->item(0);
+        if (!$componentElement instanceof DOMElement || $componentElement->tagName !== $selector) {
+            return false;
+        }
+
+        $attributes = $this->getTwigParameterMap($componentElement->attributes);
+        $numberOfGreaterThan = substr_count($attributes, ">");
+        $positionOfEndGreaterThan = $start;
+        for ($index = 0; $index < $numberOfGreaterThan + 1; $index++) {
+            $positionOfEndGreaterThan = strpos($code, ">", $positionOfEndGreaterThan);
+        }
+
+        $length = $positionOfEndGreaterThan - $start + 1;
 
         $component = [
-            'name'          => $matches[1][0],
+            'name'          => $name,
             'startPosition' => $start,
-            'attributes'    => $matches[2][0] ?? '',
-            'selfClosing'   => '/' === $tag[$length - 2],
+            'attributes'    => $attributes,
+            'selfClosing'   => '/' === $code[$positionOfEndGreaterThan - 1],
             'length'        => $length,
         ];
 
@@ -211,32 +258,27 @@ class ComponentPreprocessor implements PreprocessorInterface
     ): string {
         $twigTag = $selfClosing ? 'include' : 'embed';
         $path = $this->componentNaming->pathFromComponentName($name);
-        $params = $this->getTwigParameterMap($attributes);
 
         return substr_replace(
             $code,
-            "{% $twigTag '$path' with { props: { $params } } %}",
+            "{% $twigTag '$path' with { props: { $attributes } } %}",
             $startPosition,
             $tagLength
         );
     }
 
-    private function getTwigParameterMap(string $attributesString): string
+    private function getTwigParameterMap(DOMNamedNodeMap $attributes): string
     {
         $attributeObject = [];
-        $attributesString = htmlspecialchars($attributesString, ENT_NOQUOTES);
 
-        try {
-            $element = new SimpleXMLElement("<element $attributesString />");
-            $attributes = $element->attributes();
-        } catch (Exception $exception) {
-            $attributes = [];
-        }
+        foreach ($attributes as $attribute) {
+            if (!$attribute instanceof DOMAttr) {
+                continue;
+            }
 
-        /**
-         * @var SimpleXMLElement $value
-         */
-        foreach ($attributes as $key => $stringValue) {
+            $stringValue = urldecode($attribute->value);
+            $key = $attribute->name;
+
             $isVar = strpos($stringValue, '{{') === 0 && strpos($stringValue, '}}') === strlen($stringValue) - 2;
 
             if ($isVar) {

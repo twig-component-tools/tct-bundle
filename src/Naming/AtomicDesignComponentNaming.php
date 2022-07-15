@@ -67,10 +67,12 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
      * MContentCard
      * OPageHeader
      *
-     * @see https://regex101.com/r/3ujquL/2
+     * Group 1: Component Name
+     *
+     * @see https://regex101.com/r/3ujquL/3
      */
     public function getComponentRegex(): string
     {
-        return "/<([{$this->typeOptions}][A-Z][a-zA-Z]+\b)\s*([a-zA-Z]+=.+\")?\s*\/?>/msU";
+        return "/<([$this->typeOptions][A-Z][a-zA-Z]+)[\/\s>]/ms";
     }
 }

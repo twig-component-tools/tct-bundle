@@ -41,7 +41,7 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
 
             $jsTags = preg_replace(
                 "/$entryName(\..*)?\.js\"/",
-                "$entryName$1.js\" data-class-name=\"$name\"",
+                "$entryName$1.js\" data-component=\"$name\"",
                 $jsTags
             );
 

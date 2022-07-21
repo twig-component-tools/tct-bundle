@@ -6,8 +6,6 @@ use DOMAttr;
 use DOMDocument;
 use DOMElement;
 use DOMNamedNodeMap;
-use DOMNodeList;
-use Symfony\Component\VarDumper\VarDumper;
 use Twig\Source;
 use TwigComponentTools\TCTBundle\Naming\ComponentNamingInterface;
 
@@ -61,8 +59,6 @@ class ComponentPreprocessor implements PreprocessorInterface
             $code = $this->replaceBlocks($code, $embedId);
             $code = $this->replaceDefaultBlocks($code, $embedId);
             $code = $this->insertEmbedId($code, $embedId);
-
-            VarDumper::dump($code);
 
             return new Source($code, $source->getName(), $source->getPath());
         }

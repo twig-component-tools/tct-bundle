@@ -27,7 +27,7 @@ class ComponentPreprocessor implements PreprocessorInterface
         $components = [];
         $lastPosition = 0;
         $code = $this->getSanitizedCode($source);
-        $embedId = $this->getEmbedId($source);
+        $embedId = uniqid('context');
 
         while ($this->getNextComponent($code, $lastPosition, $nextComponent)) {
             [
@@ -211,13 +211,6 @@ class ComponentPreprocessor implements PreprocessorInterface
         }
 
         return strrev($reversed);
-    }
-
-    private function getEmbedId(Source $source): string
-    {
-        $fileName = pathinfo($source->getPath(), PATHINFO_FILENAME);
-
-        return uniqid($fileName);
     }
 
     private function insertEmbedId(string $code, string $embedId): string

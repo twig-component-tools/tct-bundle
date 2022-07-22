@@ -67,7 +67,7 @@ class ComponentPreprocessor implements PreprocessorInterface
     }
 
     /**
-     * @see https://regex101.com/r/eVctpW/1
+     * @see          https://regex101.com/r/eVctpW/1
      * @noinspection PhpUnnecessaryLocalVariableInspection
      */
     private function getSanitizedCode(Source $source): string
@@ -124,8 +124,9 @@ class ComponentPreprocessor implements PreprocessorInterface
         $attributes = $this->getTwigParameterMap($componentElement->attributes);
         $numberOfGreaterThan = substr_count($attributes, ">");
         $positionOfEndGreaterThan = $start;
+
         for ($index = 0; $index < $numberOfGreaterThan + 1; $index++) {
-            $positionOfEndGreaterThan = strpos($code, ">", $positionOfEndGreaterThan);
+            $positionOfEndGreaterThan = strpos($code, ">", $positionOfEndGreaterThan + 1);
         }
 
         $length = $positionOfEndGreaterThan - $start + 1;

@@ -9,21 +9,30 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
         'a' => 'Atom',
         'm' => 'Molecule',
         'o' => 'Organism',
+        'p' => 'Page',
         't' => 'Template',
     ];
 
     private string $typeOptions;
+    private array $typeAliases;
 
     public function __construct()
     {
-        $this->typeOptions = array_reduce(self::TYPES, fn ($carry, $type) => $carry.$type[0]);
+        $this->typeOptions = array_reduce(self::TYPES, fn($carry, $type) => $carry.$type[0]);
+        $this->typeAliases = array_map(fn($type) => '@' . strtolower($type), self::TYPES);
+        $this->typeAliases[] = '@components';
     }
 
+    /**
+     * Return the component name if it fits one of the component aliases (e.g. @components or @page)
+     */
     public function componentNameFromPath(string $path): ?string
     {
         $parts = explode('/', $path);
 
-        if ('@components' !== $parts[0]) {
+        $intersection = array_intersect($this->typeAliases, $parts);
+
+        if (empty($intersection)) {
             return null;
         }
 
@@ -37,16 +46,6 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
             self::TYPES[strtolower($componentName[0])],
             $componentName,
             "{$componentName}.twig",
-        ]);
-    }
-
-    public function selectorFromName(string $name, string $entryName): string
-    {
-        return join([
-            '.',
-            strtolower($name[0]),
-            '-',
-            lcfirst(substr($name, 1)),
         ]);
     }
 
@@ -68,10 +67,12 @@ class AtomicDesignComponentNaming implements ComponentNamingInterface
      * MContentCard
      * OPageHeader
      *
-     * @see https://regex101.com/r/3ujquL/2
+     * Group 1: Component Name
+     *
+     * @see https://regex101.com/r/3ujquL/3
      */
     public function getComponentRegex(): string
     {
-        return "/<([{$this->typeOptions}][A-Z][a-zA-Z]+\b)\s*([a-zA-Z]+=.+\")?\s*\/?>/msU";
+        return "/<([$this->typeOptions][A-Z][a-zA-Z]+)[\/\s>]/ms";
     }
 }

@@ -56,8 +56,8 @@ class ComponentPreprocessor implements PreprocessorInterface
 
         if (!empty($components)) {
             $code = $this->replaceClosingTags($code, $components);
-            $code = $this->replaceBlocks($code, $embedId);
             $code = $this->replaceDefaultBlocks($code, $embedId);
+            $code = $this->replaceBlocks($code, $embedId);
             $code = $this->insertEmbedId($code, $embedId);
 
             return new Source($code, $source->getName(), $source->getPath());
@@ -164,19 +164,22 @@ class ComponentPreprocessor implements PreprocessorInterface
         $nextEmbed = [];
         $lastPosition = 0;
 
-        while (preg_match("/{% embed .* %}/sU", $code, $nextEmbed, PREG_OFFSET_CAPTURE, $lastPosition)) {
+        while (preg_match("/{% embed ['\"](.*)['\"].* %}/sU", $code, $nextEmbed, PREG_OFFSET_CAPTURE, $lastPosition)) {
             $match = $nextEmbed[0][0]; // [fullMatch][match]
             $position = mb_strlen($match) + $nextEmbed[0][1]; // [fullMatch][offset]
             $nextCode = trim(substr($code, $position));
             $lastPosition = $position + 1;
 
-            if (0 === strpos($nextCode, '{% block')) {
+            $fileName = $nextEmbed[1][0]; // [first_group][match]
+            $name = $this->componentNaming->componentNameFromPath($fileName);
+
+            if (0 === strpos($nextCode, '<block name="')) {
                 continue;
             }
 
             $code = substr_replace(
                 $code,
-                "\n{% block default %}\n{% with { props: $embedId } %}",
+                "\n<block name=\"{$name}__default\">\n",
                 $position,
                 0
             );
@@ -188,8 +191,7 @@ class ComponentPreprocessor implements PreprocessorInterface
     private function replaceDefaultBlockEnds(string $code): string
     {
         $reversed = strrev($code);
-        $expectedString = strrev('{% endblock %}');
-        $replaceString = strrev("\n{% endwith %}\n{% endblock %}\n");
+        $expectedString = strrev('</block>');
         $endEmbed = strrev('{% endembed %}');
         $positionOffset = strlen($endEmbed);
         $lastPosition = 0;
@@ -205,7 +207,7 @@ class ComponentPreprocessor implements PreprocessorInterface
 
             $reversed = substr_replace(
                 $reversed,
-                $replaceString,
+                $expectedString,
                 $position,
                 0
             );
@@ -299,7 +301,7 @@ class ComponentPreprocessor implements PreprocessorInterface
 
     private function replaceBlocks(string $code, string $embedId): string
     {
-        $code = preg_replace('/<block name="([a-z]+)">/', "{% block $1 %}\n{% with { props: $embedId } %}", $code);
+        $code = preg_replace('/<block name="([A-Za-z-_]+)">/', "{% block $1 %}\n{% with { props: $embedId } %}", $code);
 
         return str_replace('</block>', "{% endwith %}\n{% endblock %}", $code);
     }

@@ -16,7 +16,7 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
         TagRenderer $tagRenderer
     ) {
         $this->componentNaming = $componentNaming;
-        $this->tagRenderer     = $tagRenderer;
+        $this->tagRenderer = $tagRenderer;
     }
 
     public function renderTags(
@@ -48,7 +48,7 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
             $tags[] = $jsTags;
 
             $tags[] = $this->tagRenderer->renderWebpackLinkTags(
-                $entryName,
+                'style-'.$entryName,
                 $packageName,
                 $entrypointName,
                 $extraAttributes

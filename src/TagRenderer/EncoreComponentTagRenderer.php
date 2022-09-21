@@ -62,11 +62,11 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
 
     public function renderHeadTags(array $loadedComponents): string
     {
-        return $this->renderTags($loadedComponents, ['async' => true, 'defer' => true], 'head');
+        return $this->renderTags($loadedComponents, ['async' => true, 'defer' => false], 'head');
     }
 
     public function renderBodyTags(array $loadedComponents): string
     {
-        return $this->renderTags($loadedComponents);
+        return $this->renderTags($loadedComponents, ['async' => true, 'defer' => true]);
     }
 }

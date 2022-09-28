@@ -283,7 +283,7 @@ class ComponentPreprocessor implements PreprocessorInterface
                 $stringValue = str_replace('\'', '\\\'', $stringValue);
             }
 
-            if (empty($stringValue)) {
+            if ('' === $stringValue) {
                 $stringValue = 'true';
             }
 

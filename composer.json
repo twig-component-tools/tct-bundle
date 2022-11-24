@@ -1,6 +1,6 @@
 {
   "name": "twig-component-tools/tct-bundle",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "symfony-bundle",
   "license": "MIT",
   "autoload": {
@@ -18,9 +18,9 @@
     "php": ">=7.4",
     "ext-simplexml": "*",
     "twig/twig": "^3.3",
-    "symfony/http-kernel": "^4.4|^5.4",
+    "symfony/http-kernel": "^4.4|^5.4|^6.1",
     "symfony/webpack-encore-bundle": "^v1.15",
-    "symfony/dependency-injection": "^4.4|^5.4"
+    "symfony/dependency-injection": "^4.4|^5.4|^6.1"
   },
   "archive": {
     "exclude": [

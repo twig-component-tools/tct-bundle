@@ -53,6 +53,13 @@ class EncoreComponentTagRenderer implements ComponentTagRenderInterface
                 $entrypointName,
                 $extraAttributes
             );
+
+            $tags[] = $this->tagRenderer->renderWebpackLinkTags(
+                $entryName,
+                $packageName,
+                $entrypointName,
+                $extraAttributes
+            );
         }
 
         $tags = array_filter($tags);

@@ -2,11 +2,11 @@
 
 Component loader and pre-processor for Twig templates.
 
-## Project Status: ALPHA
+## Project Status: ABANDONED
 
-* No BC promise
-* Changes quickly with internal discussions only
-* Open for suggestions and help
+* This was a shortcut taken to allow junior/intermediate Vue.js developers to quickly jump into huge legacy Symfony/Twig templates.
+* Its only purpose was to survive a big refactoring middle-step, allowing us to move forward with Vue.js and other more suited frontend languages.
+* If you still feel like this can help you, don't hesitate to contact me.
 
 ## Syntax
 

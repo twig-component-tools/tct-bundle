@@ -4,9 +4,16 @@ Component loader and pre-processor for Twig templates.
 
 ## Project Status: ABANDONED
 
-* This was a shortcut taken to allow junior/intermediate Vue.js developers to quickly jump into huge legacy Symfony/Twig templates.
-* Its only purpose was to survive a big refactoring middle-step, allowing us to move forward with Vue.js and other more suited frontend languages.
-* If you still feel like this can help you, don't hesitate to contact me.
+> <picture>
+>   <source media="(prefers-color-scheme: light)" srcset="https://github.com/Mqxx/GitHub-Markdown/blob/main/blockquotes/badge/light-theme/warning.svg">
+>   <img alt="Warning" src="https://github.com/Mqxx/GitHub-Markdown/blob/main/blockquotes/badge/dark-theme/warning.svg">
+> </picture><br>
+>
+> This was a shortcut taken to allow **junior/intermediate Vue.js developers** to quickly jump into **huge legacy Symfony/Twig templates**.
+>
+> Its only purpose was to **survive a big refactoring** middle-step, allowing us to **move forward with Vue.js** and other more suited frontend languages.
+>
+> If you still feel like this can help you, don't hesitate to contact [post@barthy.koeln](mailto:post@barthy.koeln) or create an issue.
 
 ## Syntax
 
@@ -27,7 +34,10 @@ Components can be used within regular Twig templates:
 ```twig
 {# File: @components/Atom/AButton/AButton.twig #}
 
-<button type="button" class="a-button -{{ props.theme|default('grey') }}">
+<button
+  type="button"
+  class="a-button -{{ props.theme|default('grey') }}"
+>
   {{ props.label }}
 </button>
 ```
@@ -64,7 +74,10 @@ Blocks can be defined and used like in any regular twig template. There are a fe
 ```twig
 {# File: @components/Atom/AButton/AButton.twig #}
 
-<button type="button" class="a-button -{{ props.theme|default('grey') }}">
+<button
+  type="button"
+  class="a-button -{{ props.theme|default('grey') }}"
+>
   {% block AButton__default %}{% endblock %}
 </button>
 ```
@@ -88,7 +101,10 @@ Blocks can be defined and used like in any regular twig template. There are a fe
 ```twig
 {# File: @components/Atom/AButton/AButton.twig #}
 
-<button type="button" class="a-button -{{ props.theme|default('grey') }}">
+<button
+  type="button"
+  class="a-button -{{ props.theme|default('grey') }}"
+>
   {% if block('icon') is defined %}
     <i class="a-button_icon">{{ block('icon')|raw }}</i>
   {% endif %}
@@ -125,7 +141,7 @@ TCT In:
   <AIcon name="{{ random_name() }}"/>
 ```
 
-Twig Out:
+Twig Out (Simplified):
 
 ```twig
  {% embed '@components/Atom/AButton/AButton.twig' with { props: { theme: "primary" } } %}
@@ -145,8 +161,8 @@ Twig Out:
 
 This preprocessor aims to make developing and reviewing Twig templates easier and faster.
 
-I have always been displeased with the time it takes to scan and understand bigger Twig projects.
-Working with partials and components is useful, but there is not enough visual distinction between **control**
+There is not enough visual distinction between **control**
 statements: `{% if … %}`, `{% for … %}`, `{% set … %}` and **markup/composition**: `{% include … %}`, `{% embed … %}`.
+
 [Customizing the syntax](https://twig.symfony.com/doc/2.x/recipes.html#customizing-the-syntax) doesn't quite cut it for
 me.
